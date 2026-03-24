@@ -1,10 +1,8 @@
-![build](https://github.com/cla-assistant/github-action/workflows/build/badge.svg)
-
-
-> [!IMPORTANT]
-> **This repository is no longer actively maintained.** I no longer have the bandwidth to maintain this project. The repository has been archived and is now read-only. 
->
-> You are welcome to **fork this repository** and continue development independently. All existing releases remain functional. Thank you to all contributors and users for your support over the years.
+> [!NOTE]
+> This is a fork of [contributor-assistant/github-action](https://github.com/contributor-assistant/github-action)
+> (archived upstream 2026-03-23) with the GitHub Actions runtime bumped to Node 24.
+> It is maintained for internal use only and is **not** intended as a general-purpose
+> community successor. No support or issue triage is offered.
 
 # Handling CLAs and DCOs via GitHub Action
 
