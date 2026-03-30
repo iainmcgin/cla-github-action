@@ -45,7 +45,14 @@ export async function setupClaCheck() {
       committerMap.notSigned.length === 0
     ) {
       core.info(`All contributors have signed the CLA 📝 ✅ `)
-      return reRunLastWorkFlowIfRequired()
+      // reRunLastWorkFlowIfRequired is best-effort: its failure should not
+      // fail the CLA check (we already know all contributors signed).
+      try {
+        await reRunLastWorkFlowIfRequired()
+      } catch (err) {
+        core.warning(`Best-effort rerun of prior workflow failed: ${err}`)
+      }
+      return
     } else {
       core.setFailed(
         `Committers of Pull Request number ${context.issue.number} have to sign the CLA 📝`

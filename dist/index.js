@@ -360,7 +360,7 @@ function updateFile(sha, claFileContent, reactedCommitters) {
                 ? input
                     .getSignedCommitMessage()
                     .replace('$contributorName', github_1.context.actor)
-                    // .replace('$pullRequestNo', pullRequestNo.toString())
+                    .replace('$pullRequestNo', pullRequestNo.toString())
                     .replace('$owner', owner)
                     .replace('$repo', repo)
                 : `@${github_1.context.actor} has signed the CLA in ${owner}/${repo}#${pullRequestNo}`,
@@ -427,8 +427,11 @@ const core = __importStar(__nccwpck_require__(2186));
 // Note: why this  re-run of the last failed CLA workflow status check is explained this issue https://github.com/cla-assistant/github-action/issues/39
 function reRunLastWorkFlowIfRequired() {
     return __awaiter(this, void 0, void 0, function* () {
-        if (github_1.context.eventName === 'pull_request') {
-            core.debug(`rerun not required for event - pull_request`);
+        // This rerun is only needed for issue_comment events (contributor signs
+        // by commenting). For pull_request and pull_request_target, the current
+        // run itself posts the fresh check status so there's nothing to refresh.
+        if (github_1.context.eventName === 'pull_request' || github_1.context.eventName === 'pull_request_target') {
+            core.debug(`rerun not required for event ${github_1.context.eventName}`);
             return;
         }
         const branch = yield getBranchOfPullRequest();
@@ -961,7 +964,15 @@ function setupClaCheck() {
                 (committerMap === null || committerMap === void 0 ? void 0 : committerMap.notSigned) === undefined ||
                 committerMap.notSigned.length === 0) {
                 core.info(`All contributors have signed the CLA 📝 ✅ `);
-                return (0, pullRerunRunner_1.reRunLastWorkFlowIfRequired)();
+                // reRunLastWorkFlowIfRequired is best-effort: its failure should not
+                // fail the CLA check (we already know all contributors signed).
+                try {
+                    yield (0, pullRerunRunner_1.reRunLastWorkFlowIfRequired)();
+                }
+                catch (err) {
+                    core.warning(`Best-effort rerun of prior workflow failed: ${err}`);
+                }
+                return;
             }
             else {
                 core.setFailed(`Committers of Pull Request number ${github_1.context.issue.number} have to sign the CLA 📝`);
