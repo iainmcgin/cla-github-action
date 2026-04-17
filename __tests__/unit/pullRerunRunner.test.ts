@@ -52,12 +52,13 @@ describe('reRunLastWorkFlowIfRequired', () => {
       total_count: 1,
       workflows: [{id: 12345, name: 'cla-check'}]
     })
-    json(
-      http,
-      'GET',
-      '/repos/acme/widgets/actions/workflows/12345/runs?branch=feature%2Fcla&event=pull_request_target',
-      {total_count: 1, workflow_runs: [{id: 777}]}
-    )
+    http
+      .github()
+      .intercept({
+        path: /\/repos\/acme\/widgets\/actions\/workflows\/12345\/runs\?.*/,
+        method: 'GET'
+      })
+      .reply(200, {total_count: 1, workflow_runs: [{id: 777}]}, {headers: {'content-type': 'application/json'}})
     json(http, 'GET', '/repos/acme/widgets/actions/runs/777', {conclusion: 'failure'})
     const rerun = captureJson(
       http.github(),
@@ -81,12 +82,13 @@ describe('reRunLastWorkFlowIfRequired', () => {
       total_count: 1,
       workflows: [{id: 12345, name: 'cla-check'}]
     })
-    json(
-      http,
-      'GET',
-      '/repos/acme/widgets/actions/workflows/12345/runs?branch=feature%2Fcla&event=pull_request_target',
-      {total_count: 1, workflow_runs: [{id: 777}]}
-    )
+    http
+      .github()
+      .intercept({
+        path: /\/repos\/acme\/widgets\/actions\/workflows\/12345\/runs\?.*/,
+        method: 'GET'
+      })
+      .reply(200, {total_count: 1, workflow_runs: [{id: 777}]}, {headers: {'content-type': 'application/json'}})
     json(http, 'GET', '/repos/acme/widgets/actions/runs/777', {conclusion: 'success'})
 
     const {reRunLastWorkFlowIfRequired} = loadModule()

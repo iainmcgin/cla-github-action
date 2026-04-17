@@ -17,8 +17,9 @@ export async function reRunLastWorkFlowIfRequired() {
   const workflowId = await getSelfWorkflowId()
   const runs = await listWorkflowRunsInBranch(branch, workflowId)
 
-  if (runs.data.total_count > 0) {
-    const run = runs.data.workflow_runs[0].id
+  const firstRun = runs.data.workflow_runs[0]
+  if (runs.data.total_count > 0 && firstRun) {
+    const run = firstRun.id
 
     const isLastWorkFlowFailed: boolean = await checkIfLastWorkFlowFailed(run)
     if (isLastWorkFlowFailed) {
@@ -73,14 +74,19 @@ async function getSelfWorkflowId(): Promise<number> {
 async function listWorkflowRunsInBranch(
   branch: string,
   workflowId: number
-): Promise<any> {
+): Promise<{data: {total_count: number; workflow_runs: Array<{id: number}>}}> {
   core.debug(`listing workflow runs on branch ${branch}`)
+  // Paginate to be robust on active repos. The caller only reads
+  // workflow_runs[0], so we stop after the first page for performance —
+  // GitHub returns runs newest-first, so page 1 always contains the most
+  // recent run.
   const runs = await octokit.rest.actions.listWorkflowRuns({
     owner: context.repo.owner,
     repo: context.repo.repo,
     branch,
     workflow_id: workflowId,
-    event: 'pull_request_target'
+    event: 'pull_request_target',
+    per_page: 100
   })
   return runs
 }

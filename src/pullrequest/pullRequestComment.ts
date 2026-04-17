@@ -59,12 +59,16 @@ async function updateComment(signed: boolean, committerMap: CommitterMap, claBot
 
 async function getComment() {
   try {
-    const response = await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number })
-
+    const comments = await octokit.paginate(octokit.rest.issues.listComments, {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: context.issue.number,
+      per_page: 100
+    })
     const marker = getUseDcoFlag()
       ? /.*DCO Assistant Lite bot.*/m
       : /.*CLA Assistant Lite bot.*/m
-    return response.data.find(comment => comment.body?.match(marker))
+    return comments.find(comment => comment.body?.match(marker))
   } catch (error) {
     throw new Error(`Error occured when getting  all the comments of the pull request: ${errorMessage(error)}`)
   }

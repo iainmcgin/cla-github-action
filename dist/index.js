@@ -81,74 +81,69 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = getCommitters;
 const octokit_1 = __nccwpck_require__(5957);
 const github_1 = __nccwpck_require__(3228);
+const errors_1 = __nccwpck_require__(5641);
+const GITHUB_ACTIONS_BOT_ID = 41898282;
+const COMMITS_QUERY = `
+query($owner:String! $name:String! $number:Int! $cursor:String){
+    repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+            commits(first: 100, after: $cursor) {
+                totalCount
+                edges {
+                    node {
+                        commit {
+                            author {
+                                email
+                                name
+                                user { id databaseId login }
+                            }
+                            committer {
+                                name
+                                user { id databaseId login }
+                            }
+                        }
+                    }
+                    cursor
+                }
+                pageInfo { endCursor hasNextPage }
+            }
+        }
+    }
+}`;
 function getCommitters() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            let committers = [];
-            let filteredCommitters = [];
-            let response = yield octokit_1.octokit.graphql(`
-        query($owner:String! $name:String! $number:Int! $cursor:String!){
-            repository(owner: $owner, name: $name) {
-            pullRequest(number: $number) {
-                commits(first: 100, after: $cursor) {
-                    totalCount
-                    edges {
-                        node {
-                            commit {
-                                author {
-                                    email
-                                    name
-                                    user {
-                                        id
-                                        databaseId
-                                        login
-                                    }
-                                }
-                                committer {
-                                    name
-                                    user {
-                                        id
-                                        databaseId
-                                        login
-                                    }
-                                }
-                            }
-                        }
-                        cursor
-                    }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
+            const seenNames = new Set();
+            const committers = [];
+            let cursor = null;
+            let hasNextPage = true;
+            while (hasNextPage) {
+                const response = (yield octokit_1.octokit.graphql(COMMITS_QUERY, {
+                    owner: github_1.context.repo.owner,
+                    name: github_1.context.repo.repo,
+                    number: github_1.context.issue.number,
+                    cursor
+                }));
+                const page = response.repository.pullRequest.commits;
+                for (const edge of page.edges) {
+                    const actor = extractUserFromCommit(edge.node.commit);
+                    const user = {
+                        name: actor.login || actor.name || '',
+                        id: actor.databaseId || 0,
+                        pullRequestNo: github_1.context.issue.number
+                    };
+                    if (!seenNames.has(user.name)) {
+                        seenNames.add(user.name);
+                        committers.push(user);
                     }
                 }
+                cursor = page.pageInfo.endCursor;
+                hasNextPage = page.pageInfo.hasNextPage;
             }
-        }
-    }`, {
-                owner: github_1.context.repo.owner,
-                name: github_1.context.repo.repo,
-                number: github_1.context.issue.number,
-                cursor: ''
-            });
-            response.repository.pullRequest.commits.edges.forEach((edge) => {
-                const committer = extractUserFromCommit(edge.node.commit);
-                let user = {
-                    name: committer.login || committer.name || '',
-                    id: committer.databaseId || 0,
-                    pullRequestNo: github_1.context.issue.number
-                };
-                if (committers.length === 0 || committers.map((c) => {
-                    return c.name;
-                }).indexOf(user.name) < 0) {
-                    committers.push(user);
-                }
-            });
-            filteredCommitters = committers.filter((committer) => {
-                return committer.id !== 41898282;
-            });
-            return filteredCommitters;
+            return committers.filter(c => c.id !== GITHUB_ACTIONS_BOT_ID);
         }
         catch (e) {
-            throw new Error(`graphql call to get the committers details failed: ${e}`);
+            throw new Error(`graphql call to get the committers details failed: ${(0, errors_1.errorMessage)(e)}`);
         }
     });
 }
@@ -522,8 +517,9 @@ function reRunLastWorkFlowIfRequired() {
         const branch = yield getBranchOfPullRequest();
         const workflowId = yield getSelfWorkflowId();
         const runs = yield listWorkflowRunsInBranch(branch, workflowId);
-        if (runs.data.total_count > 0) {
-            const run = runs.data.workflow_runs[0].id;
+        const firstRun = runs.data.workflow_runs[0];
+        if (runs.data.total_count > 0 && firstRun) {
+            const run = firstRun.id;
             const isLastWorkFlowFailed = yield checkIfLastWorkFlowFailed(run);
             if (isLastWorkFlowFailed) {
                 core.debug(`Rerunning build run ${run}`);
@@ -567,12 +563,17 @@ function getSelfWorkflowId() {
 function listWorkflowRunsInBranch(branch, workflowId) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`listing workflow runs on branch ${branch}`);
+        // Paginate to be robust on active repos. The caller only reads
+        // workflow_runs[0], so we stop after the first page for performance —
+        // GitHub returns runs newest-first, so page 1 always contains the most
+        // recent run.
         const runs = yield octokit_1.octokit.rest.actions.listWorkflowRuns({
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
             branch,
             workflow_id: workflowId,
-            event: 'pull_request_target'
+            event: 'pull_request_target',
+            per_page: 100
         });
         return runs;
     });
@@ -676,11 +677,16 @@ function updateComment(signed, committerMap, claBotComment) {
 function getComment() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const response = yield octokit_1.octokit.rest.issues.listComments({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: github_1.context.issue.number });
+            const comments = yield octokit_1.octokit.paginate(octokit_1.octokit.rest.issues.listComments, {
+                owner: github_1.context.repo.owner,
+                repo: github_1.context.repo.repo,
+                issue_number: github_1.context.issue.number,
+                per_page: 100
+            });
             const marker = (0, getInputs_1.getUseDcoFlag)()
                 ? /.*DCO Assistant Lite bot.*/m
                 : /.*CLA Assistant Lite bot.*/m;
-            return response.data.find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.match(marker); });
+            return comments.find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.match(marker); });
         }
         catch (error) {
             throw new Error(`Error occured when getting  all the comments of the pull request: ${(0, errors_1.errorMessage)(error)}`);
@@ -920,16 +926,17 @@ const github_1 = __nccwpck_require__(3228);
 const getInputs_1 = __nccwpck_require__(7189);
 function signatureWithPRComment(committerMap, committers) {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a;
         let repoId = github_1.context.payload.repository.id;
-        let prResponse = yield octokit_1.octokit.rest.issues.listComments({
+        const allComments = yield octokit_1.octokit.paginate(octokit_1.octokit.rest.issues.listComments, {
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
-            issue_number: github_1.context.issue.number
+            issue_number: github_1.context.issue.number,
+            per_page: 100
         });
         let listOfPRComments = [];
         let filteredListOfPRComments = [];
-        prResponse === null || prResponse === void 0 ? void 0 : prResponse.data.map((prComment) => {
-            var _a;
+        for (const prComment of allComments) {
             listOfPRComments.push({
                 name: prComment.user.login,
                 id: prComment.user.id,
@@ -939,7 +946,7 @@ function signatureWithPRComment(committerMap, committers) {
                 repoId: repoId,
                 pullRequestNo: github_1.context.issue.number
             });
-        });
+        }
         for (const comment of listOfPRComments) {
             if (isCommentSignedByUser(comment.body || "", comment.name)) {
                 const { body: _ } = comment, withoutBody = __rest(comment, ["body"]);

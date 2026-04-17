@@ -20,7 +20,7 @@ function listCommentsInterceptor(
   http
     .github()
     .intercept({
-      path: '/repos/acme/widgets/issues/42/comments',
+      path: /\/repos\/acme\/widgets\/issues\/42\/comments(\?.*)?$/,
       method: 'GET'
     })
     .reply(200, body, {headers: {'content-type': 'application/json'}})

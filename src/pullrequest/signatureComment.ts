@@ -11,15 +11,16 @@ export default async function signatureWithPRComment(
 ): Promise<ReactedCommitterMap> {
 
     let repoId = context.payload.repository!.id
-    let prResponse = await octokit.rest.issues.listComments({
+    const allComments = await octokit.paginate(octokit.rest.issues.listComments, {
         owner: context.repo.owner,
         repo: context.repo.repo,
-        issue_number: context.issue.number
+        issue_number: context.issue.number,
+        per_page: 100
     })
     let listOfPRComments = [] as CommittersDetails[]
     let filteredListOfPRComments = [] as CommittersDetails[]
 
-    prResponse?.data.map((prComment) => {
+    for (const prComment of allComments) {
         listOfPRComments.push({
             name: prComment.user!.login,
             id: prComment.user!.id,
@@ -29,7 +30,7 @@ export default async function signatureWithPRComment(
             repoId: repoId,
             pullRequestNo: context.issue.number
         })
-    })
+    }
     for (const comment of listOfPRComments) {
         if (isCommentSignedByUser(comment.body || "", comment.name)) {
             const {body: _, ...withoutBody} = comment
