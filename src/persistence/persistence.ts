@@ -1,6 +1,6 @@
 import { context } from '@actions/github'
 
-import { ReactedCommitterMap } from '../interfaces'
+import { ClaFileContent, ReactedCommitterMap } from '../interfaces'
 import { GitHub } from '@actions/github/lib/utils'
 import { getDefaultOctokitClient, getPATOctokit } from '../octokit'
 
@@ -19,7 +19,7 @@ export async function getFileContent(): Promise<any> {
   return result
 }
 
-export async function createFile(contentBinary): Promise<any> {
+export async function createFile(contentBinary: string): Promise<any> {
   const octokitInstance: InstanceType<typeof GitHub> =
     isRemoteRepoOrOrgConfigured() ? getPATOctokit() : getDefaultOctokitClient()
 
@@ -37,7 +37,7 @@ export async function createFile(contentBinary): Promise<any> {
 
 export async function updateFile(
   sha: string,
-  claFileContent,
+  claFileContent: ClaFileContent,
   reactedCommitters: ReactedCommitterMap
 ): Promise<any> {
   const octokitInstance: InstanceType<typeof GitHub> =
@@ -47,7 +47,16 @@ export async function updateFile(
   const owner = context.issue.owner
   const repo = context.issue.repo
 
-  claFileContent?.signedContributors.push(...reactedCommitters.newSigned)
+  claFileContent.signedContributors.push(
+    ...reactedCommitters.newSigned.map(c => ({
+      name: c.name,
+      id: c.id,
+      comment_id: c.comment_id,
+      created_at: c.created_at,
+      repoId: c.repoId,
+      pullRequestNo: c.pullRequestNo
+    }))
+  )
   let contentString = JSON.stringify(claFileContent, null, 2)
   let contentBinary = Buffer.from(contentString).toString('base64')
   await octokitInstance.rest.repos.createOrUpdateFileContents({

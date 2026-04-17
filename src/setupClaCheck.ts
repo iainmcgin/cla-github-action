@@ -3,6 +3,7 @@ import { context } from '@actions/github'
 import { checkAllowList } from './checkAllowList'
 import getCommitters from './graphql'
 import {
+  ClaFileContent,
   ClafileContentAndSha,
   CommitterMap,
   CommittersDetails,
@@ -15,6 +16,7 @@ import {
 } from './persistence/persistence'
 import prCommentSetup from './pullrequest/pullRequestComment'
 import { reRunLastWorkFlowIfRequired } from './pullRerunRunner'
+import { errorMessage, errorStatus } from './shared/errors'
 
 export async function setupClaCheck() {
   let committerMap = getInitialCommittersMap()
@@ -50,7 +52,7 @@ export async function setupClaCheck() {
       try {
         await reRunLastWorkFlowIfRequired()
       } catch (err) {
-        core.warning(`Best-effort rerun of prior workflow failed: ${err}`)
+        core.warning(`Best-effort rerun of prior workflow failed: ${errorMessage(err)}`)
       }
       return
     } else {
@@ -59,7 +61,7 @@ export async function setupClaCheck() {
       )
     }
   } catch (err) {
-    core.setFailed(`Could not update the JSON file: ${err.message}`)
+    core.setFailed(`Could not update the JSON file: ${errorMessage(err)}`)
   }
 }
 
@@ -71,13 +73,11 @@ async function getCLAFileContentandSHA(
   try {
     result = await getFileContent()
   } catch (error) {
-    if (error.status === 404) {
+    if (errorStatus(error) === 404) {
       return createClaFileAndPRComment(committers, committerMap)
     } else {
       throw new Error(
-        `Could not retrieve repository contents. Status: ${
-          error.status || 'unknown'
-        }`
+        `Could not retrieve repository contents. Status: ${errorStatus(error) ?? 'unknown'}`
       )
     }
   }
@@ -104,11 +104,9 @@ async function createClaFileAndPRComment(
   const initialContentBinary =
     Buffer.from(initialContentString).toString('base64')
 
-  await createFile(initialContentBinary).catch(error =>
+  await createFile(initialContentBinary).catch((error: unknown) =>
     core.setFailed(
-      `Error occurred when creating the signed contributors file: ${
-        error.message || error
-      }. Make sure the branch where signatures are stored is NOT protected.`
+      `Error occurred when creating the signed contributors file: ${errorMessage(error)}. Make sure the branch where signatures are stored is NOT protected.`
     )
   )
   await prCommentSetup(committerMap, committers)
@@ -119,7 +117,7 @@ async function createClaFileAndPRComment(
 
 function prepareCommiterMap(
   committers: CommittersDetails[],
-  claFileContent
+  claFileContent: ClaFileContent
 ): CommitterMap {
   let committerMap = getInitialCommittersMap()
 

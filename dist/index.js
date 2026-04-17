@@ -119,11 +119,11 @@ function getCommitters() {
                 number: github_1.context.issue.number,
                 cursor: ''
             });
-            response.repository.pullRequest.commits.edges.forEach(edge => {
+            response.repository.pullRequest.commits.edges.forEach((edge) => {
                 const committer = extractUserFromCommit(edge.node.commit);
                 let user = {
-                    name: committer.login || committer.name,
-                    id: committer.databaseId || '',
+                    name: committer.login || committer.name || '',
+                    id: committer.databaseId || 0,
                     pullRequestNo: github_1.context.issue.number
                 };
                 if (committers.length === 0 || committers.map((c) => {
@@ -143,7 +143,10 @@ function getCommitters() {
     });
 }
 exports["default"] = getCommitters;
-const extractUserFromCommit = (commit) => commit.author.user || commit.committer.user || commit.author || commit.committer;
+function extractUserFromCommit(commit) {
+    var _a, _b;
+    return (((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) || ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user) || commit.author || commit.committer || {});
+}
 
 
 /***/ }),
@@ -351,7 +354,14 @@ function updateFile(sha, claFileContent, reactedCommitters) {
         const pullRequestNo = github_1.context.issue.number;
         const owner = github_1.context.issue.owner;
         const repo = github_1.context.issue.repo;
-        claFileContent === null || claFileContent === void 0 ? void 0 : claFileContent.signedContributors.push(...reactedCommitters.newSigned);
+        claFileContent.signedContributors.push(...reactedCommitters.newSigned.map(c => ({
+            name: c.name,
+            id: c.id,
+            comment_id: c.comment_id,
+            created_at: c.created_at,
+            repoId: c.repoId,
+            pullRequestNo: c.pullRequestNo
+        })));
         let contentString = JSON.stringify(claFileContent, null, 2);
         let contentBinary = Buffer.from(contentString).toString('base64');
         yield octokitInstance.rest.repos.createOrUpdateFileContents({
@@ -543,6 +553,7 @@ const github_1 = __nccwpck_require__(3228);
 const signatureComment_1 = __importDefault(__nccwpck_require__(1327));
 const pullRequestCommentContent_1 = __nccwpck_require__(8501);
 const getInputs_1 = __nccwpck_require__(7189);
+const errors_1 = __nccwpck_require__(5641);
 function prCommentSetup(committerMap, committers) {
     return __awaiter(this, void 0, void 0, function* () {
         const signed = (committerMap === null || committerMap === void 0 ? void 0 : committerMap.notSigned) && (committerMap === null || committerMap === void 0 ? void 0 : committerMap.notSigned.length) === 0;
@@ -566,7 +577,7 @@ function prCommentSetup(committerMap, committers) {
             }
         }
         catch (error) {
-            throw new Error(`Error occured when creating or editing the comments of the pull request: ${error.message}`);
+            throw new Error(`Error occured when creating or editing the comments of the pull request: ${(0, errors_1.errorMessage)(error)}`);
         }
     });
 }
@@ -578,7 +589,7 @@ function createComment(signed, committerMap) {
             repo: github_1.context.repo.repo,
             issue_number: github_1.context.issue.number,
             body: (0, pullRequestCommentContent_1.commentContent)(signed, committerMap)
-        }).catch(error => { throw new Error(`Error occured when creating a pull request comment: ${error.message}`); });
+        }).catch(error => { throw new Error(`Error occured when creating a pull request comment: ${(0, errors_1.errorMessage)(error)}`); });
     });
 }
 function updateComment(signed, committerMap, claBotComment) {
@@ -588,7 +599,7 @@ function updateComment(signed, committerMap, claBotComment) {
             repo: github_1.context.repo.repo,
             comment_id: claBotComment.id,
             body: (0, pullRequestCommentContent_1.commentContent)(signed, committerMap)
-        }).catch(error => { throw new Error(`Error occured when updating the pull request comment: ${error.message}`); });
+        }).catch(error => { throw new Error(`Error occured when updating the pull request comment: ${(0, errors_1.errorMessage)(error)}`); });
     });
 }
 function getComment() {
@@ -605,13 +616,12 @@ function getComment() {
             }
         }
         catch (error) {
-            throw new Error(`Error occured when getting  all the comments of the pull request: ${error.message}`);
+            throw new Error(`Error occured when getting  all the comments of the pull request: ${(0, errors_1.errorMessage)(error)}`);
         }
     });
 }
 function prepareCommiterMap(committerMap, reactedCommitters) {
-    var _a;
-    (_a = committerMap.signed) === null || _a === void 0 ? void 0 : _a.push(...reactedCommitters.newSigned);
+    committerMap.signed.push(...reactedCommitters.newSigned);
     committerMap.notSigned = committerMap.notSigned.filter(committer => !reactedCommitters.newSigned.some(reactedCommitter => committer.id === reactedCommitter.id));
     return committerMap;
 }
@@ -880,7 +890,7 @@ function signatureWithPRComment(committerMap, committers) {
         /*
         * checking if the commented users are only the contributors who has committed in the same PR (This is needed for the PR Comment and changing the status to success when all the contributors has reacted to the PR)
         */
-        const onlyCommitters = committers.filter(committer => filteredListOfPRComments.some(commentedCommitter => committer.id == commentedCommitter.id));
+        const onlyCommitters = committers.filter((committer) => filteredListOfPRComments.some(commentedCommitter => committer.id == commentedCommitter.id));
         const commentedCommitterMap = {
             newSigned,
             onlyCommitters,
@@ -960,6 +970,7 @@ const graphql_1 = __importDefault(__nccwpck_require__(5777));
 const persistence_1 = __nccwpck_require__(9947);
 const pullRequestComment_1 = __importDefault(__nccwpck_require__(366));
 const pullRerunRunner_1 = __nccwpck_require__(8109);
+const errors_1 = __nccwpck_require__(5641);
 function setupClaCheck() {
     return __awaiter(this, void 0, void 0, function* () {
         let committerMap = getInitialCommittersMap();
@@ -983,7 +994,7 @@ function setupClaCheck() {
                     yield (0, pullRerunRunner_1.reRunLastWorkFlowIfRequired)();
                 }
                 catch (err) {
-                    core.warning(`Best-effort rerun of prior workflow failed: ${err}`);
+                    core.warning(`Best-effort rerun of prior workflow failed: ${(0, errors_1.errorMessage)(err)}`);
                 }
                 return;
             }
@@ -992,27 +1003,27 @@ function setupClaCheck() {
             }
         }
         catch (err) {
-            core.setFailed(`Could not update the JSON file: ${err.message}`);
+            core.setFailed(`Could not update the JSON file: ${(0, errors_1.errorMessage)(err)}`);
         }
     });
 }
 exports.setupClaCheck = setupClaCheck;
 function getCLAFileContentandSHA(committers, committerMap) {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         let result, claFileContentString, claFileContent, sha;
         try {
             result = yield (0, persistence_1.getFileContent)();
         }
         catch (error) {
-            if (error.status === 404) {
+            if ((0, errors_1.errorStatus)(error) === 404) {
                 return createClaFileAndPRComment(committers, committerMap);
             }
             else {
-                throw new Error(`Could not retrieve repository contents. Status: ${error.status || 'unknown'}`);
+                throw new Error(`Could not retrieve repository contents. Status: ${(_a = (0, errors_1.errorStatus)(error)) !== null && _a !== void 0 ? _a : 'unknown'}`);
             }
         }
-        sha = (_a = result === null || result === void 0 ? void 0 : result.data) === null || _a === void 0 ? void 0 : _a.sha;
+        sha = (_b = result === null || result === void 0 ? void 0 : result.data) === null || _b === void 0 ? void 0 : _b.sha;
         claFileContentString = Buffer.from(result.data.content, 'base64').toString();
         claFileContent = JSON.parse(claFileContentString);
         return { claFileContent, sha };
@@ -1030,7 +1041,7 @@ function createClaFileAndPRComment(committers, committerMap) {
         const initialContent = { signedContributors: [] };
         const initialContentString = JSON.stringify(initialContent, null, 3);
         const initialContentBinary = Buffer.from(initialContentString).toString('base64');
-        yield (0, persistence_1.createFile)(initialContentBinary).catch(error => core.setFailed(`Error occurred when creating the signed contributors file: ${error.message || error}. Make sure the branch where signatures are stored is NOT protected.`));
+        yield (0, persistence_1.createFile)(initialContentBinary).catch((error) => core.setFailed(`Error occurred when creating the signed contributors file: ${(0, errors_1.errorMessage)(error)}. Make sure the branch where signatures are stored is NOT protected.`));
         yield (0, pullRequestComment_1.default)(committerMap, committers);
         throw new Error(`Committers of pull request ${github_1.context.issue.number} have to sign the CLA`);
     });
@@ -1051,6 +1062,33 @@ const getInitialCommittersMap = () => ({
     notSigned: [],
     unknown: []
 });
+
+
+/***/ }),
+
+/***/ 5641:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.errorStatus = exports.errorMessage = void 0;
+function errorMessage(err) {
+    if (err instanceof Error)
+        return err.message;
+    return String(err);
+}
+exports.errorMessage = errorMessage;
+/** Status code from an Octokit RequestError or a generic error; undefined otherwise. */
+function errorStatus(err) {
+    if (err && typeof err === 'object' && 'status' in err) {
+        const s = err.status;
+        if (typeof s === 'number')
+            return s;
+    }
+    return undefined;
+}
+exports.errorStatus = errorStatus;
 
 
 /***/ }),

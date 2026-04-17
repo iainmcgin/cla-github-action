@@ -2,6 +2,27 @@ import { octokit } from './octokit'
 import { context } from '@actions/github'
 import { CommittersDetails } from './interfaces'
 
+interface GraphQLUser {
+    id?: string
+    databaseId?: number
+    login?: string
+}
+interface GraphQLActor {
+    email?: string
+    name?: string
+    login?: string
+    databaseId?: number
+    user?: GraphQLUser | null
+}
+interface GraphQLCommit {
+    author?: GraphQLActor
+    committer?: GraphQLActor
+}
+interface GraphQLEdge {
+    node: {commit: GraphQLCommit}
+    cursor: string
+}
+
 
 
 export default async function getCommitters(): Promise<CommittersDetails[]> {
@@ -51,11 +72,11 @@ export default async function getCommitters(): Promise<CommittersDetails[]> {
             number: context.issue.number,
             cursor: ''
         })
-        response.repository.pullRequest.commits.edges.forEach(edge => {
+        response.repository.pullRequest.commits.edges.forEach((edge: GraphQLEdge) => {
             const committer = extractUserFromCommit(edge.node.commit)
-            let user = {
-                name: committer.login || committer.name,
-                id: committer.databaseId || '',
+            let user: CommittersDetails = {
+                name: committer.login || committer.name || '',
+                id: committer.databaseId || 0,
                 pullRequestNo: context.issue.number
             }
             if (committers.length === 0 || committers.map((c) => {
@@ -74,4 +95,6 @@ export default async function getCommitters(): Promise<CommittersDetails[]> {
     }
 
 }
-const extractUserFromCommit = (commit) => commit.author.user || commit.committer.user || commit.author || commit.committer
+function extractUserFromCommit(commit: GraphQLCommit): GraphQLUser & GraphQLActor {
+    return (commit.author?.user || commit.committer?.user || commit.author || commit.committer || {}) as GraphQLUser & GraphQLActor
+}

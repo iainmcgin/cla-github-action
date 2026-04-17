@@ -4,9 +4,11 @@ import signatureWithPRComment from './signatureComment'
 import { commentContent } from './pullRequestCommentContent'
 import {
   CommitterMap,
-  CommittersDetails
+  CommittersDetails,
+  ReactedCommitterMap
 } from '../interfaces'
 import { getUseDcoFlag } from '../shared/getInputs'
+import { errorMessage } from '../shared/errors'
 
 
 
@@ -33,7 +35,7 @@ export default async function prCommentSetup(committerMap: CommitterMap, committ
     }
   } catch (error) {
     throw new Error(
-      `Error occured when creating or editing the comments of the pull request: ${error.message}`)
+      `Error occured when creating or editing the comments of the pull request: ${errorMessage(error)}`)
   }
 }
 
@@ -43,7 +45,7 @@ async function createComment(signed: boolean, committerMap: CommitterMap): Promi
     repo: context.repo.repo,
     issue_number: context.issue.number,
     body: commentContent(signed, committerMap)
-  }).catch(error => { throw new Error(`Error occured when creating a pull request comment: ${error.message}`) })
+  }).catch(error => { throw new Error(`Error occured when creating a pull request comment: ${errorMessage(error)}`) })
 }
 
 async function updateComment(signed: boolean, committerMap: CommitterMap, claBotComment: any): Promise<void> {
@@ -52,7 +54,7 @@ async function updateComment(signed: boolean, committerMap: CommitterMap, claBot
     repo: context.repo.repo,
     comment_id: claBotComment.id,
     body: commentContent(signed, committerMap)
-  }).catch(error => { throw new Error(`Error occured when updating the pull request comment: ${error.message}`) })
+  }).catch(error => { throw new Error(`Error occured when updating the pull request comment: ${errorMessage(error)}`) })
 }
 
 async function getComment() {
@@ -67,20 +69,22 @@ async function getComment() {
       return response.data.find(comment => comment.body?.match(/.*CLA Assistant Lite bot.*/m))
     }
   } catch (error) {
-    throw new Error(`Error occured when getting  all the comments of the pull request: ${error.message}`)
+    throw new Error(`Error occured when getting  all the comments of the pull request: ${errorMessage(error)}`)
   }
 }
 
-function prepareCommiterMap(committerMap: CommitterMap, reactedCommitters) {
-  committerMap.signed?.push(...reactedCommitters.newSigned)
-  committerMap.notSigned = committerMap.notSigned!.filter(
+function prepareCommiterMap(
+  committerMap: CommitterMap,
+  reactedCommitters: ReactedCommitterMap
+): CommitterMap {
+  committerMap.signed.push(...reactedCommitters.newSigned)
+  committerMap.notSigned = committerMap.notSigned.filter(
     committer =>
       !reactedCommitters.newSigned.some(
         reactedCommitter => committer.id === reactedCommitter.id
       )
   )
   return committerMap
-
 }
 
 function prepareAllSignedCommitters(committerMap: CommitterMap, signedInPrCommitters: CommittersDetails[], committers: CommittersDetails[]): boolean {
@@ -89,7 +93,7 @@ function prepareAllSignedCommitters(committerMap: CommitterMap, signedInPrCommit
    * 1) already signed committers in the file 2) signed committers in the PR comment
   */
   const ids = new Set(signedInPrCommitters.map(committer => committer.id))
-  allSignedCommitters = [...signedInPrCommitters, ...committerMap.signed!.filter(signedCommitter => !ids.has(signedCommitter.id))]
+  allSignedCommitters = [...signedInPrCommitters, ...committerMap.signed.filter(signedCommitter => !ids.has(signedCommitter.id))]
   /*
   * checking if all the unsigned committers have reacted to the PR comment (this is needed for changing the content of the PR comment to "All committers have signed the CLA")
   */
