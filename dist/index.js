@@ -22,15 +22,25 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkAllowList = void 0;
+exports.checkAllowList = checkAllowList;
 const input = __importStar(__nccwpck_require__(7189));
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -49,7 +59,6 @@ function isUserAllowListed(committer) {
 function checkAllowList(committers) {
     return committers.filter(committer => committer && !isUserAllowListed(committer.name));
 }
-exports.checkAllowList = checkAllowList;
 
 
 /***/ }),
@@ -69,6 +78,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = getCommitters;
 const octokit_1 = __nccwpck_require__(5957);
 const github_1 = __nccwpck_require__(3228);
 function getCommitters() {
@@ -142,7 +152,6 @@ function getCommitters() {
         }
     });
 }
-exports["default"] = getCommitters;
 function extractUserFromCommit(commit) {
     var _a, _b;
     return (((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) || ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user) || commit.author || commit.committer || {});
@@ -172,13 +181,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -189,7 +208,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.run = run;
 const github_1 = __nccwpck_require__(3228);
 const setupClaCheck_1 = __nccwpck_require__(3715);
 const pullRequestLock_1 = __nccwpck_require__(6868);
@@ -216,7 +235,6 @@ function run() {
         }
     });
 }
-exports.run = run;
 if (process.env.NODE_ENV !== 'test') {
     run();
 }
@@ -245,15 +263,28 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isPersonalAccessTokenPresent = exports.getPATOctokit = exports.getDefaultOctokitClient = exports.octokit = void 0;
+exports.octokit = void 0;
+exports.getDefaultOctokitClient = getDefaultOctokitClient;
+exports.getPATOctokit = getPATOctokit;
+exports.isPersonalAccessTokenPresent = isPersonalAccessTokenPresent;
 const github_1 = __nccwpck_require__(3228);
 const core = __importStar(__nccwpck_require__(7484));
 const githubActionsDefaultToken = process.env.GITHUB_TOKEN;
@@ -262,18 +293,15 @@ exports.octokit = (0, github_1.getOctokit)(githubActionsDefaultToken);
 function getDefaultOctokitClient() {
     return (0, github_1.getOctokit)(githubActionsDefaultToken);
 }
-exports.getDefaultOctokitClient = getDefaultOctokitClient;
 function getPATOctokit() {
     if (!isPersonalAccessTokenPresent()) {
         core.setFailed(`Please add a personal access token as an environment variable for writing signatures in a remote repository/organization as mentioned in the README.md file`);
     }
     return (0, github_1.getOctokit)(personalAccessToken);
 }
-exports.getPATOctokit = getPATOctokit;
 function isPersonalAccessTokenPresent() {
     return personalAccessToken !== undefined && personalAccessToken !== '';
 }
-exports.isPersonalAccessTokenPresent = isPersonalAccessTokenPresent;
 
 
 /***/ }),
@@ -299,13 +327,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -316,7 +354,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.updateFile = exports.createFile = exports.getFileContent = void 0;
+exports.getFileContent = getFileContent;
+exports.createFile = createFile;
+exports.updateFile = updateFile;
 const github_1 = __nccwpck_require__(3228);
 const octokit_1 = __nccwpck_require__(5957);
 const input = __importStar(__nccwpck_require__(7189));
@@ -332,7 +372,6 @@ function getFileContent() {
         return result;
     });
 }
-exports.getFileContent = getFileContent;
 function createFile(contentBinary) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokitInstance = isRemoteRepoOrOrgConfigured() ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)();
@@ -347,21 +386,13 @@ function createFile(contentBinary) {
         });
     });
 }
-exports.createFile = createFile;
 function updateFile(sha, claFileContent, reactedCommitters) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokitInstance = isRemoteRepoOrOrgConfigured() ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)();
         const pullRequestNo = github_1.context.issue.number;
         const owner = github_1.context.issue.owner;
         const repo = github_1.context.issue.repo;
-        claFileContent.signedContributors.push(...reactedCommitters.newSigned.map(c => ({
-            name: c.name,
-            id: c.id,
-            comment_id: c.comment_id,
-            created_at: c.created_at,
-            repoId: c.repoId,
-            pullRequestNo: c.pullRequestNo
-        })));
+        claFileContent.signedContributors.push(...reactedCommitters.newSigned);
         let contentString = JSON.stringify(claFileContent, null, 2);
         let contentBinary = Buffer.from(contentString).toString('base64');
         yield octokitInstance.rest.repos.createOrUpdateFileContents({
@@ -382,7 +413,6 @@ function updateFile(sha, claFileContent, reactedCommitters) {
         });
     });
 }
-exports.updateFile = updateFile;
 function isRemoteRepoOrOrgConfigured() {
     let isRemoteRepoOrOrgConfigured = false;
     if ((input === null || input === void 0 ? void 0 : input.getRemoteRepoName()) || input.getRemoteOrgName()) {
@@ -416,13 +446,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -433,7 +473,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.reRunLastWorkFlowIfRequired = void 0;
+exports.reRunLastWorkFlowIfRequired = reRunLastWorkFlowIfRequired;
 const github_1 = __nccwpck_require__(3228);
 const octokit_1 = __nccwpck_require__(5957);
 const core = __importStar(__nccwpck_require__(7484));
@@ -460,7 +500,6 @@ function reRunLastWorkFlowIfRequired() {
         }
     });
 }
-exports.reRunLastWorkFlowIfRequired = reRunLastWorkFlowIfRequired;
 function getBranchOfPullRequest() {
     return __awaiter(this, void 0, void 0, function* () {
         const pullRequest = yield octokit_1.octokit.rest.pulls.get({
@@ -548,6 +587,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = prCommentSetup;
 const octokit_1 = __nccwpck_require__(5957);
 const github_1 = __nccwpck_require__(3228);
 const signatureComment_1 = __importDefault(__nccwpck_require__(1327));
@@ -581,7 +621,6 @@ function prCommentSetup(committerMap, committers) {
         }
     });
 }
-exports["default"] = prCommentSetup;
 function createComment(signed, committerMap) {
     return __awaiter(this, void 0, void 0, function* () {
         yield octokit_1.octokit.rest.issues.createComment({
@@ -663,15 +702,25 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.commentContent = void 0;
+exports.commentContent = commentContent;
 const input = __importStar(__nccwpck_require__(7189));
 const pr_sign_comment_1 = __nccwpck_require__(7228);
 function commentContent(signed, committerMap) {
@@ -683,7 +732,6 @@ function commentContent(signed, committerMap) {
         return cla(signed, committerMap);
     }
 }
-exports.commentContent = commentContent;
 function dco(signed, committerMap) {
     if (signed) {
         const line1 = input.getCustomAllSignedPrComment() || `All contributors have signed the DCO  ✍️ ✅`;
@@ -783,13 +831,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -800,7 +858,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.lockPullRequest = void 0;
+exports.lockPullRequest = lockPullRequest;
 const octokit_1 = __nccwpck_require__(5957);
 const core = __importStar(__nccwpck_require__(7484));
 const github_1 = __nccwpck_require__(3228);
@@ -821,7 +879,6 @@ function lockPullRequest() {
         }
     });
 }
-exports.lockPullRequest = lockPullRequest;
 
 
 /***/ }),
@@ -852,6 +909,7 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = signatureWithPRComment;
 const octokit_1 = __nccwpck_require__(5957);
 const github_1 = __nccwpck_require__(3228);
 const getInputs_1 = __nccwpck_require__(7189);
@@ -899,7 +957,6 @@ function signatureWithPRComment(committerMap, committers) {
         return commentedCommitterMap;
     });
 }
-exports["default"] = signatureWithPRComment;
 function isCommentSignedByUser(comment, commentAuthor) {
     if (commentAuthor === 'github-actions[bot]') {
         return false;
@@ -942,13 +999,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -962,7 +1029,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setupClaCheck = void 0;
+exports.setupClaCheck = setupClaCheck;
 const core = __importStar(__nccwpck_require__(7484));
 const github_1 = __nccwpck_require__(3228);
 const checkAllowList_1 = __nccwpck_require__(4715);
@@ -1007,10 +1074,9 @@ function setupClaCheck() {
         }
     });
 }
-exports.setupClaCheck = setupClaCheck;
 function getCLAFileContentandSHA(committers, committerMap) {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         let result, claFileContentString, claFileContent, sha;
         try {
             result = yield (0, persistence_1.getFileContent)();
@@ -1072,13 +1138,13 @@ const getInitialCommittersMap = () => ({
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.errorStatus = exports.errorMessage = void 0;
+exports.errorMessage = errorMessage;
+exports.errorStatus = errorStatus;
 function errorMessage(err) {
     if (err instanceof Error)
         return err.message;
     return String(err);
 }
-exports.errorMessage = errorMessage;
 /** Status code from an Octokit RequestError or a generic error; undefined otherwise. */
 function errorStatus(err) {
     if (err && typeof err === 'object' && 'status' in err) {
@@ -1088,7 +1154,6 @@ function errorStatus(err) {
     }
     return undefined;
 }
-exports.errorStatus = errorStatus;
 
 
 /***/ }),
@@ -1114,13 +1179,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.suggestRecheck = exports.lockPullRequestAfterMerge = exports.getCustomPrSignComment = exports.getUseDcoFlag = exports.getCustomAllSignedPrComment = exports.getCustomNotSignedPrComment = exports.getCreateFileCommitMessage = exports.getSignedCommitMessage = exports.getEmptyCommitFlag = exports.getAllowListItem = exports.getBranch = exports.getPathToDocument = exports.getPathToSignatures = exports.getRemoteOrgName = exports.getRemoteRepoName = void 0;
 const core = __importStar(__nccwpck_require__(7484));
@@ -1183,20 +1258,29 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPrSignComment = void 0;
+exports.getPrSignComment = getPrSignComment;
 const input = __importStar(__nccwpck_require__(7189));
 function getPrSignComment() {
     return input.getCustomPrSignComment() || "I have read the CLA Document and I hereby sign the CLA";
 }
-exports.getPrSignComment = getPrSignComment;
 
 
 /***/ }),

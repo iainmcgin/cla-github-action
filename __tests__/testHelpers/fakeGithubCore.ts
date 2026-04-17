@@ -148,24 +148,24 @@ export function createFakeGitHubCore(): FakeGitHubCore {
 
   // ---------- GET ----------
   addRoute(getRoutes, '/repos/:owner/:repo/contents/:path', (m, _b, query) => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const path = decodeURIComponent(m[3])
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const path = decodeURIComponent(m[3]!)
     void query.get('ref')
     const f = getRepo(owner, name).files.get(path)
     if (!f) return notFound()
     return json(200, {sha: f.sha, content: f.content, encoding: 'base64', path})
   })
   addRoute(getRoutes, '/repos/:owner/:repo/issues/:num/comments', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const num = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const num = parseInt(m[3]!, 10)
     return json(200, getRepo(owner, name).comments.get(num) || [])
   })
   addRoute(getRoutes, '/repos/:owner/:repo/pulls/:num', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const num = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const num = parseInt(m[3]!, 10)
     const pr = getRepo(owner, name).pulls.get(num)
     if (!pr) return notFound()
     return json(200, {
@@ -176,16 +176,16 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/git/commits/:sha', m => {
-    const s = decodeURIComponent(m[3])
+    const s = decodeURIComponent(m[3]!)
     return json(200, {sha: s, tree: {sha: `tree-${s}`}})
   })
   addRoute(getRoutes, '/repos/:owner/:repo/git/trees/:sha', m => {
-    const s = decodeURIComponent(m[3])
+    const s = decodeURIComponent(m[3]!)
     return json(200, {sha: s, tree: []})
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/workflows', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
     const repo = getRepo(owner, name)
     return json(200, {
       total_count: repo.workflows.length,
@@ -193,9 +193,9 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/workflows/:id/runs', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const id = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const id = parseInt(m[3]!, 10)
     const wf = getRepo(owner, name).workflows.find(w => w.id === id)
     if (!wf) return notFound()
     return json(200, {
@@ -204,9 +204,9 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/runs/:id', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const id = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const id = parseInt(m[3]!, 10)
     for (const wf of getRepo(owner, name).workflows) {
       const r = wf.runs.find(run => run.id === id)
       if (r) return json(200, {id: r.id, conclusion: r.conclusion})
@@ -216,9 +216,9 @@ export function createFakeGitHubCore(): FakeGitHubCore {
 
   // ---------- PUT ----------
   addRoute(putRoutes, '/repos/:owner/:repo/contents/:path', (m, body) => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const path = decodeURIComponent(m[3])
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const path = decodeURIComponent(m[3]!)
     const repo = getRepo(owner, name)
     const parsed = JSON.parse(body || '{}')
     const newSha = sha(repo.nextShaCounter++, 'file')
@@ -226,18 +226,18 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     return json(200, {content: {sha: newSha, path}, commit: {sha: `commit-${newSha}`}})
   })
   addRoute(putRoutes, '/repos/:owner/:repo/issues/:num/lock', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const num = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const num = parseInt(m[3]!, 10)
     recordedLocks.push({owner, repo: name, issue: num})
     return {status: 204, body: ''}
   })
 
   // ---------- POST ----------
   addRoute(postRoutes, '/repos/:owner/:repo/issues/:num/comments', (m, body) => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const num = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const num = parseInt(m[3]!, 10)
     const parsed = JSON.parse(body || '{}')
     const repo = getRepo(owner, name)
     const id = repo.nextCommentId++
@@ -253,8 +253,8 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     return json(201, comment)
   })
   addRoute(postRoutes, '/repos/:owner/:repo/git/commits', (m, body) => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
     const repo = getRepo(owner, name)
     const parsed = JSON.parse(body || '{}')
     const newSha = sha(repo.nextShaCounter++, 'commit')
@@ -265,18 +265,18 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   })
   addRoute(postRoutes, '/repos/:owner/:repo/actions/runs/:id/rerun', m => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const id = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const id = parseInt(m[3]!, 10)
     recordedRerunRequests.push({owner, repo: name, runId: id})
     return {status: 201, body: ''}
   })
 
   // ---------- PATCH ----------
   addRoute(patchRoutes, '/repos/:owner/:repo/issues/comments/:id', (m, body) => {
-    const owner = decodeURIComponent(m[1])
-    const name = decodeURIComponent(m[2])
-    const id = parseInt(m[3], 10)
+    const owner = decodeURIComponent(m[1]!)
+    const name = decodeURIComponent(m[2]!)
+    const id = parseInt(m[3]!, 10)
     const parsed = JSON.parse(body || '{}')
     for (const list of getRepo(owner, name).comments.values()) {
       const c = list.find(c => c.id === id)
@@ -288,7 +288,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     return notFound()
   })
   addRoute(patchRoutes, '/repos/:owner/:repo/git/refs/heads/:branch', m => {
-    return json(200, {ref: `refs/heads/${decodeURIComponent(m[3])}`, object: {sha: 'newref'}})
+    return json(200, {ref: `refs/heads/${decodeURIComponent(m[3]!)}`, object: {sha: 'newref'}})
   })
 
   function handleGraphQL(body: string): RouteResult {

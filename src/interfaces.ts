@@ -11,24 +11,24 @@ export interface ReactedCommitterMap {
 }
 
 export interface CommittersDetails {
-    name: string,
-    id: number,
-    pullRequestNo?: number,
-    created_at?: string,
-    updated_at?: string,
-    comment_id?: number,
-    body?: string,
-    repoId?: number
+    name: string
+    id: number
+    pullRequestNo?: number | undefined
+    created_at?: string | undefined
+    updated_at?: string | undefined
+    comment_id?: number | undefined
+    body?: string | undefined
+    repoId?: number | undefined
 }
 
 /** Shape of a single record in the signatures JSON file. */
 export interface Signature {
     name: string
     id: number
-    comment_id?: number
-    created_at?: string
-    repoId?: number
-    pullRequestNo?: number
+    comment_id?: number | undefined
+    created_at?: string | undefined
+    repoId?: number | undefined
+    pullRequestNo?: number | undefined
 }
 
 /** Shape of the signatures JSON file on disk. */

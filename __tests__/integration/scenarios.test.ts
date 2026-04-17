@@ -71,7 +71,7 @@ describe('CLA action end-to-end scenarios', () => {
 
     const comments = fake.repo('acme', 'widgets').listComments(7)
     expect(comments).toHaveLength(1)
-    expect(comments[0].body).toMatch(/CLA Assistant Lite bot/)
+    expect(comments[0]!.body).toMatch(/CLA Assistant Lite bot/)
 
     expect(watch.failures.join('\n')).toMatch(/Committers of Pull Request number 7/)
     watch.restore()

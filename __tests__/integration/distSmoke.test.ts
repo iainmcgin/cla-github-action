@@ -120,7 +120,7 @@ describe('Layer 4 smoke test: dist/index.js against HTTP fake', () => {
 
     const comments = fake.repo('acme', 'widgets').listComments(7)
     expect(comments).toHaveLength(1)
-    expect(comments[0].body).toMatch(/CLA Assistant Lite bot/)
+    expect(comments[0]!.body).toMatch(/CLA Assistant Lite bot/)
   }, 20000)
 
   it('bundled action writes a new signature and requests a workflow rerun when a contributor signs via comment', async () => {

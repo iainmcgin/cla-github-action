@@ -95,7 +95,7 @@ function normalizeLog(log: FakeGitHubHttp['requestLog']): NormalizedRequest[] {
     // carries a server-assigned comment id that will match across runs because
     // the fake state starts clean per scenario, so we only need to strip query
     // strings and percent-encoding quirks.
-    path: decodeURIComponent((e.path.split('?')[0])),
+    path: decodeURIComponent(e.path.split('?')[0] || ''),
     status: e.status
   }))
 }

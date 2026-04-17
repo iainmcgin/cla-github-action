@@ -76,7 +76,7 @@ describe('bug fixes', () => {
       // A bot comment should have been posted.
       const comments = fake.repo('acme', 'widgets').listComments(7)
       expect(comments).toHaveLength(1)
-      expect(comments[0].body).toMatch(/CLA Assistant Lite bot/)
+      expect(comments[0]!.body).toMatch(/CLA Assistant Lite bot/)
 
       // And the check should be marked failed.
       expect(watch.failures.join('\n')).toMatch(/Committers of pull request 7/)
@@ -115,7 +115,7 @@ describe('bug fixes', () => {
 
       const comments = fake.repo('acme', 'widgets').listComments(8)
       expect(comments).toHaveLength(1)
-      expect(comments[0].body).toMatch(/all contributors have signed the cla/i)
+      expect(comments[0]!.body).toMatch(/all contributors have signed the cla/i)
       expect(watch.failures).toEqual([])
       watch.restore()
     })
