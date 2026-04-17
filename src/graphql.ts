@@ -45,7 +45,7 @@ export default async function getCommitters(): Promise<CommittersDetails[]> {
                 }
             }
         }
-    }`.replace(/ /g, ''), {
+    }`, {
             owner: context.repo.owner,
             name: context.repo.repo,
             number: context.issue.number,

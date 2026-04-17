@@ -74,7 +74,7 @@ async function listWorkflowRunsInBranch(
   branch: string,
   workflowId: number
 ): Promise<any> {
-  console.debug(branch)
+  core.debug(`listing workflow runs on branch ${branch}`)
   const runs = await octokit.rest.actions.listWorkflowRuns({
     owner: context.repo.owner,
     repo: context.repo.repo,

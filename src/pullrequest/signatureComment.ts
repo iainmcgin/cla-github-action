@@ -27,13 +27,11 @@ export default async function signatureWithPRComment(committerMap: CommitterMap,
             pullRequestNo: context.issue.number
         })
     })
-    listOfPRComments.map(comment => {
+    for (const comment of listOfPRComments) {
         if (isCommentSignedByUser(comment.body || "", comment.name)) {
-            filteredListOfPRComments.push(comment)
+            const {body: _, ...withoutBody} = comment
+            filteredListOfPRComments.push(withoutBody)
         }
-    })
-    for (var i = 0; i < filteredListOfPRComments.length; i++) {
-        delete filteredListOfPRComments[i].body
     }
     /*
     *checking if the reacted committers are not the signed committers(not in the storage file) and filtering only the unsigned committers

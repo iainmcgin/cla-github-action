@@ -64,18 +64,24 @@ describe('prCommentSetup', () => {
 
     expect(captured.body.body).toContain('CLA Assistant Lite bot')
     expect(captured.body.body).toContain(':x: @bob')
-    expect(captured.body.body).toContain(':white_check_mark: (alice)')
+    expect(captured.body.body).toContain(':white_check_mark: [alice](https://github.com/alice)')
     http.assertClean()
   })
 
-  it('does nothing when there are no prior bot comments and nobody to sign', async () => {
+  it('posts an all-signed comment when there is no prior bot comment and everyone is already signed', async () => {
     listCommentsInterceptor(http, [])
+    const captured = captureJson(
+      http.github(),
+      {path: '/repos/acme/widgets/issues/42/comments', method: 'POST'},
+      {status: 201, body: {id: 999}}
+    )
 
     const prCommentSetup = loadModule()
     await prCommentSetup(
       {signed: [{name: 'alice', id: 1, pullRequestNo: 42}], notSigned: [], unknown: []},
       [{name: 'alice', id: 1, pullRequestNo: 42}]
     )
+    expect(captured.body.body).toMatch(/all contributors have signed the cla/i)
     http.assertClean()
   })
 

@@ -35,20 +35,19 @@ const input = __importStar(__nccwpck_require__(7189));
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-function isUserNotInAllowList(committer) {
+function isUserAllowListed(committer) {
     const allowListPatterns = input.getAllowListItem().split(',');
-    return allowListPatterns.filter(function (pattern) {
-        pattern = pattern.trim();
+    return allowListPatterns.some(rawPattern => {
+        const pattern = rawPattern.trim();
         if (pattern.includes('*')) {
             const regex = escapeRegExp(pattern).split('\\*').join('.*');
             return new RegExp(regex).test(committer);
         }
         return pattern === committer;
-    }).length > 0;
+    });
 }
 function checkAllowList(committers) {
-    const committersAfterAllowListCheck = committers.filter(committer => committer && !(isUserNotInAllowList !== undefined && isUserNotInAllowList(committer.name)));
-    return committersAfterAllowListCheck;
+    return committers.filter(committer => committer && !isUserAllowListed(committer.name));
 }
 exports.checkAllowList = checkAllowList;
 
@@ -114,7 +113,7 @@ function getCommitters() {
                 }
             }
         }
-    }`.replace(/ /g, ''), {
+    }`, {
                 owner: github_1.context.repo.owner,
                 name: github_1.context.repo.repo,
                 number: github_1.context.issue.number,
@@ -486,7 +485,7 @@ function getSelfWorkflowId() {
 }
 function listWorkflowRunsInBranch(branch, workflowId) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.debug(branch);
+        core.debug(`listing workflow runs on branch ${branch}`);
         const runs = yield octokit_1.octokit.rest.actions.listWorkflowRuns({
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
@@ -549,7 +548,7 @@ function prCommentSetup(committerMap, committers) {
         const signed = (committerMap === null || committerMap === void 0 ? void 0 : committerMap.notSigned) && (committerMap === null || committerMap === void 0 ? void 0 : committerMap.notSigned.length) === 0;
         try {
             const claBotComment = yield getComment();
-            if (!claBotComment && !signed) {
+            if (!claBotComment) {
                 return createComment(signed, committerMap);
             }
             else if (claBotComment === null || claBotComment === void 0 ? void 0 : claBotComment.id) {
@@ -694,7 +693,7 @@ function dco(signed, committerMap) {
    `;
     if (committersCount > 1 && committerMap && committerMap.signed && committerMap.notSigned) {
         text += `**${committerMap.signed.length}** out of **${committerMap.signed.length + committerMap.notSigned.length}** committers have signed the DCO.`;
-        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: (${signedCommitter.name})[https://github.com/${signedCommitter.name}]`; });
+        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: [${signedCommitter.name}](https://github.com/${signedCommitter.name})`; });
         committerMap.notSigned.forEach(unsignedCommitter => {
             text += `<br/>:x: @${unsignedCommitter.name}`;
         });
@@ -731,7 +730,7 @@ function cla(signed, committerMap) {
    `;
     if (committersCount > 1 && committerMap && committerMap.signed && committerMap.notSigned) {
         text += `**${committerMap.signed.length}** out of **${committerMap.signed.length + committerMap.notSigned.length}** committers have signed the CLA.`;
-        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: (${signedCommitter.name})[https://github.com/${signedCommitter.name}]`; });
+        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: [${signedCommitter.name}](https://github.com/${signedCommitter.name})`; });
         committerMap.notSigned.forEach(unsignedCommitter => {
             text += `<br/>:x: @${unsignedCommitter.name}`;
         });
@@ -831,6 +830,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const octokit_1 = __nccwpck_require__(5957);
 const github_1 = __nccwpck_require__(3228);
@@ -857,13 +867,11 @@ function signatureWithPRComment(committerMap, committers) {
                 pullRequestNo: github_1.context.issue.number
             });
         });
-        listOfPRComments.map(comment => {
+        for (const comment of listOfPRComments) {
             if (isCommentSignedByUser(comment.body || "", comment.name)) {
-                filteredListOfPRComments.push(comment);
+                const { body: _ } = comment, withoutBody = __rest(comment, ["body"]);
+                filteredListOfPRComments.push(withoutBody);
             }
-        });
-        for (var i = 0; i < filteredListOfPRComments.length; i++) {
-            delete filteredListOfPRComments[i].body;
         }
         /*
         *checking if the reacted committers are not the signed committers(not in the storage file) and filtering only the unsigned committers
@@ -997,7 +1005,7 @@ function getCLAFileContentandSHA(committers, committerMap) {
             result = yield (0, persistence_1.getFileContent)();
         }
         catch (error) {
-            if (error.status === "404") {
+            if (error.status === 404) {
                 return createClaFileAndPRComment(committers, committerMap);
             }
             else {

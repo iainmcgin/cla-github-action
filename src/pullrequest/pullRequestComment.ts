@@ -15,7 +15,7 @@ export default async function prCommentSetup(committerMap: CommitterMap, committ
 
   try {
     const claBotComment = await getComment()
-    if (!claBotComment && !signed) {
+    if (!claBotComment) {
       return createComment(signed, committerMap)
     } else if (claBotComment?.id) {
       if (signed) {

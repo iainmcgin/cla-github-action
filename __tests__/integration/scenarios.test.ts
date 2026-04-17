@@ -122,7 +122,7 @@ describe('CLA action end-to-end scenarios', () => {
     ])
   })
 
-  it('Already-signed contributor opens a PR with no prior bot comment: no-op, signatures file untouched', async () => {
+  it('Already-signed contributor opens a PR with no prior bot comment: posts an all-signed comment, file untouched', async () => {
     const watch = watchCore()
     fake.repo('acme', 'widgets').addPullRequest({
       number: 8,
@@ -150,9 +150,12 @@ describe('CLA action end-to-end scenarios', () => {
 
     await runAction()
 
-    // File untouched and no failure.
+    // File untouched.
     const sigFile = fake.repo('acme', 'widgets').getFile('signatures/cla.json') as any
     expect(sigFile.signedContributors).toHaveLength(1)
+    // All-signed bot comment posted.
+    const comments = fake.repo('acme', 'widgets').listComments(8)
+    expect(comments.some(c => /all contributors have signed the cla/i.test(c.body))).toBe(true)
     expect(watch.failures).toEqual([])
     watch.restore()
   })
