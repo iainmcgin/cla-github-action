@@ -751,87 +751,65 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.commentContent = commentContent;
 const input = __importStar(__nccwpck_require__(7189));
 const pr_sign_comment_1 = __nccwpck_require__(7228);
+const CLA = {
+    label: 'CLA',
+    documentTitle: 'Contributor License Agreement',
+    defaultSignPhrase: 'I have read the CLA Document and I hereby sign the CLA',
+    botName: 'CLA Assistant Lite bot'
+};
+const DCO = {
+    label: 'DCO',
+    documentTitle: 'Developer Certificate of Origin',
+    defaultSignPhrase: 'I have read the DCO Document and I hereby sign the DCO',
+    botName: 'DCO Assistant Lite bot'
+};
 function commentContent(signed, committerMap) {
-    if (input.getUseDcoFlag()) {
-        return dco(signed, committerMap);
-    }
-    else {
-        return cla(signed, committerMap);
-    }
+    const mode = input.getUseDcoFlag() ? DCO : CLA;
+    return signed ? renderAllSigned(mode) : renderPending(mode, committerMap);
 }
-function dco(signed, committerMap) {
-    if (signed) {
-        const line1 = input.getCustomAllSignedPrComment() || `All contributors have signed the DCO  ✍️ ✅`;
-        const text = `${line1}<br/><sub>Posted by the ****DCO Assistant Lite bot****.</sub>`;
-        return text;
-    }
-    let committersCount = 1;
-    if (committerMap && committerMap.signed && committerMap.notSigned) {
-        committersCount = committerMap.signed.length + committerMap.notSigned.length;
-    }
-    let you = committersCount > 1 ? `you all` : `you`;
-    let lineOne = (input.getCustomNotSignedPrComment() || `<br/>Thank you for your submission, we really appreciate it. Like many open-source projects, we ask that $you sign our [Developer Certificate of Origin](${input.getPathToDocument()}) before we can accept your contribution. You can sign the DCO by just posting a Pull Request Comment same as the below format.<br/>`).replace('$you', you);
-    let text = `${lineOne}
+function renderAllSigned(mode) {
+    const allSignedLine = input.getCustomAllSignedPrComment() ||
+        `All contributors have signed the ${mode.label}  ✍️ ✅`;
+    return `${allSignedLine}<br/>${botSignature(mode)}`;
+}
+function renderPending(mode, committerMap) {
+    const committersCount = committerMap.signed.length + committerMap.notSigned.length || 1;
+    const you = committersCount > 1 ? 'you all' : 'you';
+    const introTemplate = input.getCustomNotSignedPrComment() ||
+        `<br/>Thank you for your submission, we really appreciate it. Like many open-source projects, we ask that $you sign our [${mode.documentTitle}](${input.getPathToDocument()}) before we can accept your contribution. You can sign the ${mode.label} by just posting a Pull Request Comment same as the below format.<br/>`;
+    const intro = introTemplate.replace('$you', you);
+    const signPhrase = mode === CLA
+        ? (0, pr_sign_comment_1.getPrSignComment)()
+        : input.getCustomPrSignComment() || DCO.defaultSignPhrase;
+    let text = `${intro}
    - - -
-   ${input.getCustomPrSignComment() || "I have read the DCO Document and I hereby sign the DCO"}
+   ${signPhrase}
    - - -
    `;
-    if (committersCount > 1 && committerMap && committerMap.signed && committerMap.notSigned) {
-        text += `**${committerMap.signed.length}** out of **${committerMap.signed.length + committerMap.notSigned.length}** committers have signed the DCO.`;
-        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: [${signedCommitter.name}](https://github.com/${signedCommitter.name})`; });
-        committerMap.notSigned.forEach(unsignedCommitter => {
-            text += `<br/>:x: @${unsignedCommitter.name}`;
-        });
+    if (committersCount > 1) {
+        text += `**${committerMap.signed.length}** out of **${committerMap.signed.length + committerMap.notSigned.length}** committers have signed the ${mode.label}.`;
+        for (const s of committerMap.signed) {
+            text += `<br/>:white_check_mark: [${s.name}](https://github.com/${s.name})`;
+        }
+        for (const u of committerMap.notSigned) {
+            text += `<br/>:x: @${u.name}`;
+        }
         text += '<br/>';
     }
-    if (committerMap && committerMap.unknown && committerMap.unknown.length > 0) {
-        let seem = committerMap.unknown.length > 1 ? "seem" : "seems";
-        let committerNames = committerMap.unknown.map(committer => committer.name);
-        text += `**${committerNames.join(", ")}** ${seem} not to be a GitHub user.`;
-        text += ' You need a GitHub account to be able to sign the DCO. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>';
+    if (committerMap.unknown.length > 0) {
+        const seem = committerMap.unknown.length > 1 ? 'seem' : 'seems';
+        const names = committerMap.unknown.map(c => c.name).join(', ');
+        text += `**${names}** ${seem} not to be a GitHub user.`;
+        text += ` You need a GitHub account to be able to sign the ${mode.label}. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>`;
     }
     if (input.suggestRecheck()) {
         text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
     }
-    text += '<sub>Posted by the ****DCO Assistant Lite bot****.</sub>';
+    text += botSignature(mode);
     return text;
 }
-function cla(signed, committerMap) {
-    if (signed) {
-        const line1 = input.getCustomAllSignedPrComment() || `All contributors have signed the CLA  ✍️ ✅`;
-        const text = `${line1}<br/><sub>Posted by the ****CLA Assistant Lite bot****.</sub>`;
-        return text;
-    }
-    let committersCount = 1;
-    if (committerMap && committerMap.signed && committerMap.notSigned) {
-        committersCount = committerMap.signed.length + committerMap.notSigned.length;
-    }
-    let you = committersCount > 1 ? `you all` : `you`;
-    let lineOne = (input.getCustomNotSignedPrComment() || `<br/>Thank you for your submission, we really appreciate it. Like many open-source projects, we ask that $you sign our [Contributor License Agreement](${input.getPathToDocument()}) before we can accept your contribution. You can sign the CLA by just posting a Pull Request Comment same as the below format.<br/>`).replace('$you', you);
-    let text = `${lineOne}
-   - - -
-   ${(0, pr_sign_comment_1.getPrSignComment)()}
-   - - -
-   `;
-    if (committersCount > 1 && committerMap && committerMap.signed && committerMap.notSigned) {
-        text += `**${committerMap.signed.length}** out of **${committerMap.signed.length + committerMap.notSigned.length}** committers have signed the CLA.`;
-        committerMap.signed.forEach(signedCommitter => { text += `<br/>:white_check_mark: [${signedCommitter.name}](https://github.com/${signedCommitter.name})`; });
-        committerMap.notSigned.forEach(unsignedCommitter => {
-            text += `<br/>:x: @${unsignedCommitter.name}`;
-        });
-        text += '<br/>';
-    }
-    if (committerMap && committerMap.unknown && committerMap.unknown.length > 0) {
-        let seem = committerMap.unknown.length > 1 ? "seem" : "seems";
-        let committerNames = committerMap.unknown.map(committer => committer.name);
-        text += `**${committerNames.join(", ")}** ${seem} not to be a GitHub user.`;
-        text += ' You need a GitHub account to be able to sign the CLA. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>';
-    }
-    if (input.suggestRecheck()) {
-        text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
-    }
-    text += '<sub>Posted by the **CLA Assistant Lite bot**.</sub>';
-    return text;
+function botSignature(mode) {
+    return `<sub>Posted by the **${mode.botName}**.</sub>`;
 }
 
 
