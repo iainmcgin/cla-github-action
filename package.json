@@ -6,12 +6,8 @@
   "scripts": {
     "test": "jest",
     "build": "tsc && ncc build",
-    "buildAndAdd": "npm run build && git add ."
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run buildAndAdd"
-    }
+    "buildAndAdd": "npm run build && git add .",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -24,18 +20,14 @@
   ],
   "dependencies": {
     "@actions/core": "^1.10.0",
-    "@actions/github": "^6.0.1",
-    "@octokit/rest": "^16.43.2",
-    "actions-toolkit": "^2.1.0",
-    "husky": "^4.3.8",
-    "lodash": "^4.17.21",
-    "node-fetch": "^3.3.0"
+    "@actions/github": "^6.0.1"
   },
   "devDependencies": {
-    "@octokit/types": "8.1.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^18.11.18",
     "@vercel/ncc": "^0.38.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
     "ts-jest": "^29.0.5",
     "typescript": "^4.9.4"
   },
