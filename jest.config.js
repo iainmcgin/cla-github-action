@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/*.test.ts'],
   testRunner: 'jest-circus/runner',
+  setupFiles: ['<rootDir>/__tests__/testHelpers/setupEnv.ts'],
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },

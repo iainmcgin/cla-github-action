@@ -215,7 +215,9 @@ function run() {
     });
 }
 exports.run = run;
-run();
+if (process.env.NODE_ENV !== 'test') {
+    run();
+}
 
 
 /***/ }),
