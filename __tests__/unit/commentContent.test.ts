@@ -1,6 +1,6 @@
-import {resetEnv, setDefaultInputs, setInput} from '../testHelpers/env'
-import {commentContent} from '../../src/pullrequest/pullRequestCommentContent'
-import {CommitterMap} from '../../src/interfaces'
+import { resetEnv, setDefaultInputs, setInput } from '../testHelpers/env'
+import { commentContent } from '../../src/pullrequest/pullRequestCommentContent'
+import { CommitterMap } from '../../src/interfaces'
 
 function committerMap(overrides: Partial<CommitterMap> = {}): CommitterMap {
   return {
@@ -32,8 +32,8 @@ describe('commentContent (CLA mode)', () => {
     const body = commentContent(
       false,
       committerMap({
-        signed: [{name: 'alice', id: 1, pullRequestNo: 7}],
-        notSigned: [{name: 'bob', id: 2, pullRequestNo: 7}]
+        signed: [{ name: 'alice', id: 1, pullRequestNo: 7 }],
+        notSigned: [{ name: 'bob', id: 2, pullRequestNo: 7 }]
       })
     )
     expect(body).toContain('1** out of **2** committers have signed')
@@ -45,7 +45,7 @@ describe('commentContent (CLA mode)', () => {
   it('uses singular "you" language when only one committer', () => {
     const body = commentContent(
       false,
-      committerMap({notSigned: [{name: 'bob', id: 2, pullRequestNo: 7}]})
+      committerMap({ notSigned: [{ name: 'bob', id: 2, pullRequestNo: 7 }] })
     )
     expect(body).toContain('ask that you sign')
   })
@@ -54,8 +54,8 @@ describe('commentContent (CLA mode)', () => {
     const body = commentContent(
       false,
       committerMap({
-        signed: [{name: 'alice', id: 1, pullRequestNo: 7}],
-        notSigned: [{name: 'bob', id: 2, pullRequestNo: 7}]
+        signed: [{ name: 'alice', id: 1, pullRequestNo: 7 }],
+        notSigned: [{ name: 'bob', id: 2, pullRequestNo: 7 }]
       })
     )
     expect(body).toContain('ask that you all sign')
@@ -64,7 +64,9 @@ describe('commentContent (CLA mode)', () => {
   it('mentions unknown (non-GitHub-user) committers separately', () => {
     const body = commentContent(
       false,
-      committerMap({unknown: [{name: 'typo@example.com', id: 0, pullRequestNo: 7}]})
+      committerMap({
+        unknown: [{ name: 'typo@example.com', id: 0, pullRequestNo: 7 }]
+      })
     )
     expect(body).toContain('typo@example.com')
     expect(body).toContain('seems not to be a GitHub user')
@@ -79,7 +81,7 @@ describe('commentContent (CLA mode)', () => {
 
 describe('commentContent (DCO mode)', () => {
   beforeEach(() => {
-    setDefaultInputs({'use-dco-flag': 'true'})
+    setDefaultInputs({ 'use-dco-flag': 'true' })
   })
   afterEach(resetEnv)
 

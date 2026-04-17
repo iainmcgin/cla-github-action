@@ -1,5 +1,5 @@
-import {resetEnv, setInput} from '../testHelpers/env'
-import {getPrSignComment} from '../../src/shared/pr-sign-comment'
+import { resetEnv, setInput } from '../testHelpers/env'
+import { getPrSignComment } from '../../src/shared/pr-sign-comment'
 
 describe('getPrSignComment', () => {
   afterEach(resetEnv)

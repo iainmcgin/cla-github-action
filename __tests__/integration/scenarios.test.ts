@@ -1,14 +1,14 @@
 import * as core from '@actions/core'
-import {installFakeGitHub, FakeGitHub} from '../testHelpers/fakeGithub'
-import {resetEnv, setDefaultInputs, setInput} from '../testHelpers/env'
-import {reloadOctokit, setContext} from '../testHelpers/context'
+import { installFakeGitHub, FakeGitHub } from '../testHelpers/fakeGithub'
+import { resetEnv, setDefaultInputs, setInput } from '../testHelpers/env'
+import { reloadOctokit, setContext } from '../testHelpers/context'
 
 async function runAction() {
   reloadOctokit()
   for (const path of Object.keys(require.cache)) {
     if (path.includes('/src/')) delete require.cache[path]
   }
-  const {run} = require('../../src/main') as typeof import('../../src/main')
+  const { run } = require('../../src/main') as typeof import('../../src/main')
   await run()
 }
 
@@ -49,10 +49,12 @@ describe('CLA action end-to-end scenarios', () => {
     const watch = watchCore()
     fake.repo('acme', 'widgets').addPullRequest({
       number: 7,
-      head: {sha: 'headsha', ref: 'feature/cla'},
-      commits: [{author: {login: 'alice', id: 1001}}]
+      head: { sha: 'headsha', ref: 'feature/cla' },
+      commits: [{ author: { login: 'alice', id: 1001 } }]
     })
-    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {signedContributors: []})
+    fake
+      .repo('acme', 'widgets')
+      .setFile('signatures/cla.json', { signedContributors: [] })
 
     setContext({
       owner: 'acme',
@@ -61,8 +63,8 @@ describe('CLA action end-to-end scenarios', () => {
       actor: 'alice',
       eventName: 'pull_request_target',
       payload: {
-        pull_request: {number: 7, state: 'open'},
-        repository: {id: fake.repo('acme', 'widgets').state.id},
+        pull_request: { number: 7, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
         action: 'opened'
       }
     })
@@ -73,27 +75,33 @@ describe('CLA action end-to-end scenarios', () => {
     expect(comments).toHaveLength(1)
     expect(comments[0]!.body).toMatch(/CLA Assistant Lite bot/)
 
-    expect(watch.failures.join('\n')).toMatch(/Committers of Pull Request number 7/)
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 7/
+    )
     watch.restore()
   })
 
   it('Contributor posts the sign phrase: signatures file updated, bot comment marks all signed', async () => {
     fake.repo('acme', 'widgets').addPullRequest({
       number: 7,
-      head: {sha: 'headsha', ref: 'feature/cla'},
-      commits: [{author: {login: 'alice', id: 1001}}]
+      head: { sha: 'headsha', ref: 'feature/cla' },
+      commits: [{ author: { login: 'alice', id: 1001 } }]
     })
-    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {signedContributors: []})
+    fake
+      .repo('acme', 'widgets')
+      .setFile('signatures/cla.json', { signedContributors: [] })
     // Existing bot comment + the user's signing comment.
     fake.repo('acme', 'widgets').addComment(7, {
       body: 'something **CLA Assistant Lite bot** says',
-      user: {login: 'github-actions[bot]', id: 41898282}
+      user: { login: 'github-actions[bot]', id: 41898282 }
     })
     fake.repo('acme', 'widgets').addComment(7, {
       body: 'I have read the CLA Document and I hereby sign the CLA',
-      user: {login: 'alice', id: 1001}
+      user: { login: 'alice', id: 1001 }
     })
-    fake.repo('acme', 'widgets').addWorkflow('cla-check', [{id: 777, conclusion: 'failure'}])
+    fake
+      .repo('acme', 'widgets')
+      .addWorkflow('cla-check', [{ id: 777, conclusion: 'failure' }])
 
     setContext({
       owner: 'acme',
@@ -103,22 +111,32 @@ describe('CLA action end-to-end scenarios', () => {
       eventName: 'issue_comment',
       payload: {
         action: 'created',
-        issue: {number: 7, pull_request: {}},
-        comment: {body: 'I have read the CLA Document and I hereby sign the CLA', user: {login: 'alice', id: 1001}},
-        repository: {id: fake.repo('acme', 'widgets').state.id}
+        issue: { number: 7, pull_request: {} },
+        comment: {
+          body: 'I have read the CLA Document and I hereby sign the CLA',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
       }
     })
 
     await runAction()
 
-    const sigFile = fake.repo('acme', 'widgets').getFile('signatures/cla.json') as any
-    expect(sigFile.signedContributors.map((c: any) => c.name)).toContain('alice')
+    const sigFile = fake
+      .repo('acme', 'widgets')
+      .getFile('signatures/cla.json') as any
+    expect(sigFile.signedContributors.map((c: any) => c.name)).toContain(
+      'alice'
+    )
 
-    const bot = fake.repo('acme', 'widgets').listComments(7).find(c => c.user.login === 'github-actions[bot]')!
+    const bot = fake
+      .repo('acme', 'widgets')
+      .listComments(7)
+      .find(c => c.user.login === 'github-actions[bot]')!
     expect(bot.body).toMatch(/all contributors have signed the cla/i)
 
     expect(fake.recordedRerunRequests).toEqual([
-      {owner: 'acme', repo: 'widgets', runId: 777}
+      { owner: 'acme', repo: 'widgets', runId: 777 }
     ])
   })
 
@@ -126,12 +144,19 @@ describe('CLA action end-to-end scenarios', () => {
     const watch = watchCore()
     fake.repo('acme', 'widgets').addPullRequest({
       number: 8,
-      head: {sha: 'headsha', ref: 'feature/again'},
-      commits: [{author: {login: 'alice', id: 1001}}]
+      head: { sha: 'headsha', ref: 'feature/again' },
+      commits: [{ author: { login: 'alice', id: 1001 } }]
     })
     fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
       signedContributors: [
-        {name: 'alice', id: 1001, comment_id: 99, created_at: '2024-01-01', repoId: 1, pullRequestNo: 3}
+        {
+          name: 'alice',
+          id: 1001,
+          comment_id: 99,
+          created_at: '2024-01-01',
+          repoId: 1,
+          pullRequestNo: 3
+        }
       ]
     })
 
@@ -142,8 +167,8 @@ describe('CLA action end-to-end scenarios', () => {
       actor: 'alice',
       eventName: 'pull_request_target',
       payload: {
-        pull_request: {number: 8, state: 'open'},
-        repository: {id: fake.repo('acme', 'widgets').state.id},
+        pull_request: { number: 8, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
         action: 'opened'
       }
     })
@@ -151,11 +176,15 @@ describe('CLA action end-to-end scenarios', () => {
     await runAction()
 
     // File untouched.
-    const sigFile = fake.repo('acme', 'widgets').getFile('signatures/cla.json') as any
+    const sigFile = fake
+      .repo('acme', 'widgets')
+      .getFile('signatures/cla.json') as any
     expect(sigFile.signedContributors).toHaveLength(1)
     // All-signed bot comment posted.
     const comments = fake.repo('acme', 'widgets').listComments(8)
-    expect(comments.some(c => /all contributors have signed the cla/i.test(c.body))).toBe(true)
+    expect(
+      comments.some(c => /all contributors have signed the cla/i.test(c.body))
+    ).toBe(true)
     expect(watch.failures).toEqual([])
     watch.restore()
   })
@@ -163,10 +192,12 @@ describe('CLA action end-to-end scenarios', () => {
   it('Dependabot PR: allow-listed, skipped entirely, check passes', async () => {
     fake.repo('acme', 'widgets').addPullRequest({
       number: 9,
-      head: {sha: 'headsha', ref: 'deps/bump'},
-      commits: [{author: {login: 'dependabot[bot]', id: 49699333}}]
+      head: { sha: 'headsha', ref: 'deps/bump' },
+      commits: [{ author: { login: 'dependabot[bot]', id: 49699333 } }]
     })
-    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {signedContributors: []})
+    fake
+      .repo('acme', 'widgets')
+      .setFile('signatures/cla.json', { signedContributors: [] })
 
     setContext({
       owner: 'acme',
@@ -175,8 +206,8 @@ describe('CLA action end-to-end scenarios', () => {
       actor: 'dependabot[bot]',
       eventName: 'pull_request_target',
       payload: {
-        pull_request: {number: 9, state: 'open'},
-        repository: {id: fake.repo('acme', 'widgets').state.id},
+        pull_request: { number: 9, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
         action: 'opened'
       }
     })
@@ -184,7 +215,9 @@ describe('CLA action end-to-end scenarios', () => {
     await runAction()
 
     // No signatures recorded (allowlist short-circuits).
-    const sigFile = fake.repo('acme', 'widgets').getFile('signatures/cla.json') as any
+    const sigFile = fake
+      .repo('acme', 'widgets')
+      .getFile('signatures/cla.json') as any
     expect(sigFile.signedContributors).toEqual([])
   })
 
@@ -196,12 +229,14 @@ describe('CLA action end-to-end scenarios', () => {
       repo: 'widgets',
       issueNumber: 10,
       eventName: 'pull_request',
-      payload: {action: 'closed', pull_request: {number: 10, merged: true}}
+      payload: { action: 'closed', pull_request: { number: 10, merged: true } }
     })
 
     await runAction()
 
-    expect(fake.recordedLocks).toEqual([{owner: 'acme', repo: 'widgets', issue: 10}])
+    expect(fake.recordedLocks).toEqual([
+      { owner: 'acme', repo: 'widgets', issue: 10 }
+    ])
   })
 
   it('Remote signatures repo: reads and writes hit the configured remote org/repo', async () => {
@@ -210,10 +245,12 @@ describe('CLA action end-to-end scenarios', () => {
 
     fake.repo('acme', 'widgets').addPullRequest({
       number: 11,
-      head: {sha: 'headsha', ref: 'feat/x'},
-      commits: [{author: {login: 'alice', id: 1001}}]
+      head: { sha: 'headsha', ref: 'feat/x' },
+      commits: [{ author: { login: 'alice', id: 1001 } }]
     })
-    fake.repo('other-org', 'sig-store').setFile('signatures/cla.json', {signedContributors: []})
+    fake
+      .repo('other-org', 'sig-store')
+      .setFile('signatures/cla.json', { signedContributors: [] })
 
     setContext({
       owner: 'acme',
@@ -222,8 +259,8 @@ describe('CLA action end-to-end scenarios', () => {
       actor: 'alice',
       eventName: 'pull_request_target',
       payload: {
-        pull_request: {number: 11, state: 'open'},
-        repository: {id: fake.repo('acme', 'widgets').state.id},
+        pull_request: { number: 11, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
         action: 'opened'
       }
     })
@@ -231,12 +268,20 @@ describe('CLA action end-to-end scenarios', () => {
     const watch = watchCore()
     await runAction()
 
-    expect(watch.failures.join('\n')).toMatch(/Committers of Pull Request number 11/)
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 11/
+    )
     // No file in the main repo (persistence went to the remote repo only).
-    expect(fake.repo('acme', 'widgets').getFile('signatures/cla.json')).toBeUndefined()
+    expect(
+      fake.repo('acme', 'widgets').getFile('signatures/cla.json')
+    ).toBeUndefined()
     // Remote file is still empty (unsigned contributor didn't sign).
     expect(
-      (fake.repo('other-org', 'sig-store').getFile('signatures/cla.json') as any).signedContributors
+      (
+        fake
+          .repo('other-org', 'sig-store')
+          .getFile('signatures/cla.json') as any
+      ).signedContributors
     ).toEqual([])
     watch.restore()
   })

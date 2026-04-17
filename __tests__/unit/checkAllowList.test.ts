@@ -1,9 +1,9 @@
-import {resetEnv, setInput} from '../testHelpers/env'
-import {checkAllowList} from '../../src/checkAllowList'
-import {CommittersDetails} from '../../src/interfaces'
+import { resetEnv, setInput } from '../testHelpers/env'
+import { checkAllowList } from '../../src/checkAllowList'
+import { CommittersDetails } from '../../src/interfaces'
 
 function committer(name: string): CommittersDetails {
-  return {name, id: 0, pullRequestNo: 1}
+  return { name, id: 0, pullRequestNo: 1 }
 }
 
 describe('checkAllowList', () => {
@@ -38,18 +38,21 @@ describe('checkAllowList', () => {
   it('treats regex metacharacters in patterns as literal', () => {
     setInput('allowlist', 'user.name+tag')
     expect(
-      checkAllowList([committer('user.name+tag'), committer('userXnameYtag')]).map(
-        c => c.name
-      )
+      checkAllowList([
+        committer('user.name+tag'),
+        committer('userXnameYtag')
+      ]).map(c => c.name)
     ).toEqual(['userXnameYtag'])
   })
 
   it('trims whitespace around comma-separated entries', () => {
     setInput('allowlist', ' alice , bob ')
     expect(
-      checkAllowList([committer('alice'), committer('bob'), committer('carol')]).map(
-        c => c.name
-      )
+      checkAllowList([
+        committer('alice'),
+        committer('bob'),
+        committer('carol')
+      ]).map(c => c.name)
     ).toEqual(['carol'])
   })
 

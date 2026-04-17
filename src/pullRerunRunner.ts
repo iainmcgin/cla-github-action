@@ -8,7 +8,10 @@ export async function reRunLastWorkFlowIfRequired() {
   // This rerun is only needed for issue_comment events (contributor signs
   // by commenting). For pull_request and pull_request_target, the current
   // run itself posts the fresh check status so there's nothing to refresh.
-  if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
+  if (
+    context.eventName === 'pull_request' ||
+    context.eventName === 'pull_request_target'
+  ) {
     core.debug(`rerun not required for event ${context.eventName}`)
     return
   }
@@ -74,7 +77,9 @@ async function getSelfWorkflowId(): Promise<number> {
 async function listWorkflowRunsInBranch(
   branch: string,
   workflowId: number
-): Promise<{data: {total_count: number; workflow_runs: Array<{id: number}>}}> {
+): Promise<{
+  data: { total_count: number; workflow_runs: Array<{ id: number }> }
+}> {
   core.debug(`listing workflow runs on branch ${branch}`)
   // Paginate to be robust on active repos. The caller only reads
   // workflow_runs[0], so we stop after the first page for performance —

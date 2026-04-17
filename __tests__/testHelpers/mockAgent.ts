@@ -1,4 +1,9 @@
-import {MockAgent, setGlobalDispatcher, getGlobalDispatcher, Dispatcher} from 'undici'
+import {
+  MockAgent,
+  setGlobalDispatcher,
+  getGlobalDispatcher,
+  Dispatcher
+} from 'undici'
 
 /**
  * Per-test helper: installs an isolated undici MockAgent as the global HTTP
@@ -49,28 +54,26 @@ export function useMockAgent(): () => MockAgentHarness {
  */
 export function captureJson<T = any>(
   pool: ReturnType<MockAgent['get']>,
-  match: {path: string | RegExp; method: string},
-  reply: {status: number; body: any}
-): {body: T | undefined; rawBody: string | undefined} {
-  const captured: {body: T | undefined; rawBody: string | undefined} = {
+  match: { path: string | RegExp; method: string },
+  reply: { status: number; body: any }
+): { body: T | undefined; rawBody: string | undefined } {
+  const captured: { body: T | undefined; rawBody: string | undefined } = {
     body: undefined,
     rawBody: undefined
   }
-  pool
-    .intercept(match)
-    .reply(
-      reply.status,
-      (opts: any) => {
-        const raw = typeof opts.body === 'string' ? opts.body : ''
-        captured.rawBody = raw
-        try {
-          captured.body = raw ? (JSON.parse(raw) as T) : undefined
-        } catch {
-          captured.body = undefined
-        }
-        return reply.body
-      },
-      {headers: {'content-type': 'application/json'}}
-    )
+  pool.intercept(match).reply(
+    reply.status,
+    (opts: any) => {
+      const raw = typeof opts.body === 'string' ? opts.body : ''
+      captured.rawBody = raw
+      try {
+        captured.body = raw ? (JSON.parse(raw) as T) : undefined
+      } catch {
+        captured.body = undefined
+      }
+      return reply.body
+    },
+    { headers: { 'content-type': 'application/json' } }
+  )
   return captured
 }

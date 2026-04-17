@@ -52,7 +52,9 @@ export async function setupClaCheck() {
       try {
         await reRunLastWorkFlowIfRequired()
       } catch (err) {
-        core.warning(`Best-effort rerun of prior workflow failed: ${errorMessage(err)}`)
+        core.warning(
+          `Best-effort rerun of prior workflow failed: ${errorMessage(err)}`
+        )
       }
       return
     } else {

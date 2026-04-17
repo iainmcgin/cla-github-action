@@ -8,11 +8,14 @@
  * last commit before the @actions/github@6 upgrade. If that commit is not
  * reachable the test is skipped with a clear message.
  */
-import {execFileSync, spawn} from 'child_process'
+import { execFileSync, spawn } from 'child_process'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import {startFakeGitHubHttp, FakeGitHubHttp} from '../testHelpers/fakeGithubHttp'
+import {
+  startFakeGitHubHttp,
+  FakeGitHubHttp
+} from '../testHelpers/fakeGithubHttp'
 
 const PRE_REF_COMMIT = 'eeb7f3f'
 const currentDist = path.resolve(__dirname, '..', '..', 'dist', 'index.js')
@@ -23,7 +26,7 @@ function tryExtractPreDist(): string | null {
     const out = execFileSync(
       'git',
       ['show', `${PRE_REF_COMMIT}:dist/index.js`],
-      {maxBuffer: 128 * 1024 * 1024}
+      { maxBuffer: 128 * 1024 * 1024 }
     )
     const file = path.join(os.tmpdir(), `cla-pre-${PRE_REF_COMMIT}.js`)
     fs.writeFileSync(file, out)
@@ -40,10 +43,13 @@ function writeEventFile(payload: unknown): string {
   return file
 }
 
-function runDist(distFile: string, env: Record<string, string>): Promise<{code: number | null}> {
+function runDist(
+  distFile: string,
+  env: Record<string, string>
+): Promise<{ code: number | null }> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [distFile], {
-      env: {PATH: process.env.PATH || '', ...env},
+      env: { PATH: process.env.PATH || '', ...env },
       stdio: ['ignore', 'pipe', 'pipe']
     })
     // Drain output so the child does not block on a full stdio pipe.
@@ -55,12 +61,16 @@ function runDist(distFile: string, env: Record<string, string>): Promise<{code: 
     }, 15000)
     child.on('exit', code => {
       clearTimeout(timer)
-      resolve({code})
+      resolve({ code })
     })
   })
 }
 
-function scenarioEnv(fake: FakeGitHubHttp, eventName: string, eventPath: string): Record<string, string> {
+function scenarioEnv(
+  fake: FakeGitHubHttp,
+  eventName: string,
+  eventPath: string
+): Record<string, string> {
   return {
     'INPUT_PATH-TO-SIGNATURES': 'signatures/cla.json',
     'INPUT_PATH-TO-DOCUMENT': 'https://example.com/cla',
@@ -68,7 +78,6 @@ function scenarioEnv(fake: FakeGitHubHttp, eventName: string, eventPath: string)
     INPUT_ALLOWLIST: '*[bot]',
     'INPUT_USE-DCO-FLAG': 'false',
     'INPUT_LOCK-PULLREQUEST-AFTERMERGE': 'true',
-    'INPUT_EMPTY-COMMIT-FLAG': 'false',
     GITHUB_API_URL: fake.baseUrl,
     GITHUB_GRAPHQL_URL: `${fake.baseUrl}/graphql`,
     GITHUB_TOKEN: 'smoke-token',
@@ -111,16 +120,18 @@ const scenarios: Array<{
     setup: fake => {
       fake.repo('acme', 'widgets').addPullRequest({
         number: 7,
-        head: {sha: 'headsha', ref: 'feature/cla'},
-        commits: [{author: {login: 'alice', id: 1001}}]
+        head: { sha: 'headsha', ref: 'feature/cla' },
+        commits: [{ author: { login: 'alice', id: 1001 } }]
       })
-      fake.repo('acme', 'widgets').setFile('signatures/cla.json', {signedContributors: []})
+      fake
+        .repo('acme', 'widgets')
+        .setFile('signatures/cla.json', { signedContributors: [] })
     },
     eventName: 'pull_request_target',
     buildEvent: fake => ({
       action: 'opened',
-      pull_request: {number: 7, state: 'open'},
-      repository: {id: fake.repo('acme', 'widgets').state.id}
+      pull_request: { number: 7, state: 'open' },
+      repository: { id: fake.repo('acme', 'widgets').state.id }
     })
   },
   {
@@ -128,29 +139,33 @@ const scenarios: Array<{
     setup: fake => {
       fake.repo('acme', 'widgets').addPullRequest({
         number: 7,
-        head: {sha: 'headsha', ref: 'feature/cla'},
-        commits: [{author: {login: 'alice', id: 1001}}]
+        head: { sha: 'headsha', ref: 'feature/cla' },
+        commits: [{ author: { login: 'alice', id: 1001 } }]
       })
-      fake.repo('acme', 'widgets').setFile('signatures/cla.json', {signedContributors: []})
+      fake
+        .repo('acme', 'widgets')
+        .setFile('signatures/cla.json', { signedContributors: [] })
       fake.repo('acme', 'widgets').addComment(7, {
         body: '**CLA Assistant Lite bot**: comment',
-        user: {login: 'github-actions[bot]', id: 41898282}
+        user: { login: 'github-actions[bot]', id: 41898282 }
       })
       fake.repo('acme', 'widgets').addComment(7, {
         body: 'I have read the CLA Document and I hereby sign the CLA',
-        user: {login: 'alice', id: 1001}
+        user: { login: 'alice', id: 1001 }
       })
-      fake.repo('acme', 'widgets').addWorkflow('cla-check', [{id: 777, conclusion: 'failure'}])
+      fake
+        .repo('acme', 'widgets')
+        .addWorkflow('cla-check', [{ id: 777, conclusion: 'failure' }])
     },
     eventName: 'issue_comment',
     buildEvent: fake => ({
       action: 'created',
-      issue: {number: 7, pull_request: {}},
+      issue: { number: 7, pull_request: {} },
       comment: {
         body: 'I have read the CLA Document and I hereby sign the CLA',
-        user: {login: 'alice', id: 1001}
+        user: { login: 'alice', id: 1001 }
       },
-      repository: {id: fake.repo('acme', 'widgets').state.id}
+      repository: { id: fake.repo('acme', 'widgets').state.id }
     })
   },
   {
@@ -159,7 +174,7 @@ const scenarios: Array<{
     eventName: 'pull_request',
     buildEvent: () => ({
       action: 'closed',
-      pull_request: {number: 10, merged: true}
+      pull_request: { number: 10, merged: true }
     })
   }
 ]
@@ -194,7 +209,10 @@ describe('pre- vs post-refactor: HTTP-level behaviour is unchanged', () => {
         }
       }
 
-      const [pre, post] = await Promise.all([runOne(preDist!), runOne(currentDist)])
+      const [pre, post] = await Promise.all([
+        runOne(preDist!),
+        runOne(currentDist)
+      ])
 
       // Sort by path so request ordering (which can differ legitimately across
       // HTTP library versions) does not dominate the diff. We still verify the

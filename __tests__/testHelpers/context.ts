@@ -22,11 +22,11 @@ const defaults: TestContext = {
 
 /** Overwrite the @actions/github context with test values. */
 export function setContext(overrides: Partial<TestContext> = {}): TestContext {
-  const ctx = {...defaults, ...overrides}
+  const ctx = { ...defaults, ...overrides }
   // @ts-ignore — overwrite the readonly Context instance for test setup
   github.context = {
-    repo: {owner: ctx.owner, repo: ctx.repo},
-    issue: {owner: ctx.owner, repo: ctx.repo, number: ctx.issueNumber},
+    repo: { owner: ctx.owner, repo: ctx.repo },
+    issue: { owner: ctx.owner, repo: ctx.repo, number: ctx.issueNumber },
     actor: ctx.actor,
     eventName: ctx.eventName,
     workflow: ctx.workflow,

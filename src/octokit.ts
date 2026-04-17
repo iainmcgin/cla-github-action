@@ -27,7 +27,9 @@ export function getPATOctokit(): Octokit {
       core.setFailed(
         `Please add a personal access token as an environment variable for writing signatures in a remote repository/organization as mentioned in the README.md file`
       )
-      throw new Error('PERSONAL_ACCESS_TOKEN is required for remote signatures repo')
+      throw new Error(
+        'PERSONAL_ACCESS_TOKEN is required for remote signatures repo'
+      )
     }
     patClient = getOctokit(token)
   }
@@ -41,9 +43,14 @@ export function getPATOctokit(): Octokit {
  */
 export const octokit: Octokit = new Proxy({} as Octokit, {
   get(_target, prop: string | symbol) {
-    const client = getDefaultOctokitClient() as unknown as Record<string | symbol, unknown>
+    const client = getDefaultOctokitClient() as unknown as Record<
+      string | symbol,
+      unknown
+    >
     const value = client[prop]
-    return typeof value === 'function' ? (value as Function).bind(client) : value
+    return typeof value === 'function'
+      ? (value as Function).bind(client)
+      : value
   }
 })
 

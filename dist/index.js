@@ -149,7 +149,11 @@ function getCommitters() {
 }
 function extractUserFromCommit(commit) {
     var _a, _b;
-    return (((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) || ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user) || commit.author || commit.committer || {});
+    return (((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) ||
+        ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user) ||
+        commit.author ||
+        commit.committer ||
+        {});
 }
 
 
@@ -314,7 +318,9 @@ exports.octokit = new Proxy({}, {
     get(_target, prop) {
         const client = getDefaultOctokitClient();
         const value = client[prop];
-        return typeof value === 'function' ? value.bind(client) : value;
+        return typeof value === 'function'
+            ? value.bind(client)
+            : value;
     }
 });
 function isPersonalAccessTokenPresent() {
@@ -422,8 +428,13 @@ function updateFile(sha, claFileContent, reactedCommitters) {
     return __awaiter(this, void 0, void 0, function* () {
         const t = resolveSignaturesTarget();
         const pullRequestNo = github_1.context.issue.number;
-        claFileContent.signedContributors.push(...reactedCommitters.newSigned);
-        const contentBinary = Buffer.from(JSON.stringify(claFileContent, null, 2)).toString('base64');
+        const updated = {
+            signedContributors: [
+                ...claFileContent.signedContributors,
+                ...reactedCommitters.newSigned
+            ]
+        };
+        const contentBinary = Buffer.from(JSON.stringify(updated, null, 2)).toString('base64');
         yield t.octokit.rest.repos.createOrUpdateFileContents({
             owner: t.owner,
             repo: t.repo,
@@ -510,7 +521,8 @@ function reRunLastWorkFlowIfRequired() {
         // This rerun is only needed for issue_comment events (contributor signs
         // by commenting). For pull_request and pull_request_target, the current
         // run itself posts the fresh check status so there's nothing to refresh.
-        if (github_1.context.eventName === 'pull_request' || github_1.context.eventName === 'pull_request_target') {
+        if (github_1.context.eventName === 'pull_request' ||
+            github_1.context.eventName === 'pull_request_target') {
             core.debug(`rerun not required for event ${github_1.context.eventName}`);
             return;
         }
@@ -656,22 +668,30 @@ function prCommentSetup(committerMap, committers) {
 }
 function createComment(signed, committerMap) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield octokit_1.octokit.rest.issues.createComment({
+        yield octokit_1.octokit.rest.issues
+            .createComment({
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
             issue_number: github_1.context.issue.number,
             body: (0, pullRequestCommentContent_1.commentContent)(signed, committerMap)
-        }).catch(error => { throw new Error(`Error occured when creating a pull request comment: ${(0, errors_1.errorMessage)(error)}`); });
+        })
+            .catch(error => {
+            throw new Error(`Error occured when creating a pull request comment: ${(0, errors_1.errorMessage)(error)}`);
+        });
     });
 }
 function updateComment(signed, committerMap, claBotComment) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield octokit_1.octokit.rest.issues.updateComment({
+        yield octokit_1.octokit.rest.issues
+            .updateComment({
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
             comment_id: claBotComment.id,
             body: (0, pullRequestCommentContent_1.commentContent)(signed, committerMap)
-        }).catch(error => { throw new Error(`Error occured when updating the pull request comment: ${(0, errors_1.errorMessage)(error)}`); });
+        })
+            .catch(error => {
+            throw new Error(`Error occured when updating the pull request comment: ${(0, errors_1.errorMessage)(error)}`);
+        });
     });
 }
 function getComment() {
@@ -702,12 +722,15 @@ function prepareAllSignedCommitters(committerMap, signedInPrCommitters, committe
     let allSignedCommitters = [];
     /*
      * 1) already signed committers in the file 2) signed committers in the PR comment
-    */
+     */
     const ids = new Set(signedInPrCommitters.map(committer => committer.id));
-    allSignedCommitters = [...signedInPrCommitters, ...committerMap.signed.filter(signedCommitter => !ids.has(signedCommitter.id))];
+    allSignedCommitters = [
+        ...signedInPrCommitters,
+        ...committerMap.signed.filter(signedCommitter => !ids.has(signedCommitter.id))
+    ];
     /*
-    * checking if all the unsigned committers have reacted to the PR comment (this is needed for changing the content of the PR comment to "All committers have signed the CLA")
-    */
+     * checking if all the unsigned committers have reacted to the PR comment (this is needed for changing the content of the PR comment to "All committers have signed the CLA")
+     */
     let allSignedFlag = committers.every(committer => allSignedCommitters.some(reactedCommitter => committer.id === reactedCommitter.id));
     return allSignedFlag;
 }
@@ -809,7 +832,8 @@ function renderPending(mode, committerMap) {
         text += ` You need a GitHub account to be able to sign the ${mode.label}. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>`;
     }
     if (input.suggestRecheck()) {
-        text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
+        text +=
+            '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
     }
     text += botSignature(mode);
     return text;
@@ -875,7 +899,6 @@ const core = __importStar(__nccwpck_require__(7484));
 const github_1 = __nccwpck_require__(3228);
 function lockPullRequest() {
     return __awaiter(this, void 0, void 0, function* () {
-        core.info('Locking the Pull Request to safe guard the Pull Request CLA Signatures');
         const pullRequestNo = github_1.context.issue.number;
         try {
             yield octokit_1.octokit.rest.issues.lock({
@@ -883,10 +906,10 @@ function lockPullRequest() {
                 repo: github_1.context.repo.repo,
                 issue_number: pullRequestNo
             });
-            core.info(`successfully locked the pull request ${pullRequestNo}`);
+            core.info(`Locked pull request ${pullRequestNo} to safeguard CLA signatures`);
         }
         catch (e) {
-            core.error(`failed when locking the pull request `);
+            core.error(`Failed to lock pull request ${pullRequestNo}`);
         }
     });
 }
@@ -948,18 +971,18 @@ function signatureWithPRComment(committerMap, committers) {
             });
         }
         for (const comment of listOfPRComments) {
-            if (isCommentSignedByUser(comment.body || "", comment.name)) {
+            if (isCommentSignedByUser(comment.body || '', comment.name)) {
                 const { body: _ } = comment, withoutBody = __rest(comment, ["body"]);
                 filteredListOfPRComments.push(withoutBody);
             }
         }
         /*
-        *checking if the reacted committers are not the signed committers(not in the storage file) and filtering only the unsigned committers
-        */
+         *checking if the reacted committers are not the signed committers(not in the storage file) and filtering only the unsigned committers
+         */
         const newSigned = filteredListOfPRComments.filter(commentedCommitter => committerMap.notSigned.some(notSignedCommitter => commentedCommitter.id === notSignedCommitter.id));
         /*
-        * checking if the commented users are only the contributors who has committed in the same PR (This is needed for the PR Comment and changing the status to success when all the contributors has reacted to the PR)
-        */
+         * checking if the commented users are only the contributors who has committed in the same PR (This is needed for the PR Comment and changing the status to success when all the contributors has reacted to the PR)
+         */
         const onlyCommitters = committers.filter((committer) => filteredListOfPRComments.some(commentedCommitter => committer.id == commentedCommitter.id));
         const commentedCommitterMap = {
             newSigned,
@@ -973,7 +996,7 @@ function isCommentSignedByUser(comment, commentAuthor) {
     if (commentAuthor === 'github-actions[bot]') {
         return false;
     }
-    if ((0, getInputs_1.getCustomPrSignComment)() !== "") {
+    if ((0, getInputs_1.getCustomPrSignComment)() !== '') {
         return (0, getInputs_1.getCustomPrSignComment)().toLowerCase() === comment;
     }
     const signaturePattern = (0, getInputs_1.getUseDcoFlag)()
@@ -1204,7 +1227,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.suggestRecheck = exports.lockPullRequestAfterMerge = exports.getCustomPrSignComment = exports.getUseDcoFlag = exports.getCustomAllSignedPrComment = exports.getCustomNotSignedPrComment = exports.getCreateFileCommitMessage = exports.getSignedCommitMessage = exports.getEmptyCommitFlag = exports.getAllowListItem = exports.getBranch = exports.getPathToDocument = exports.getPathToSignatures = exports.getRemoteOrgName = exports.getRemoteRepoName = void 0;
+exports.suggestRecheck = exports.lockPullRequestAfterMerge = exports.getCustomPrSignComment = exports.getUseDcoFlag = exports.getCustomAllSignedPrComment = exports.getCustomNotSignedPrComment = exports.getCreateFileCommitMessage = exports.getSignedCommitMessage = exports.getAllowListItem = exports.getBranch = exports.getPathToDocument = exports.getPathToSignatures = exports.getRemoteOrgName = exports.getRemoteRepoName = void 0;
 const core = __importStar(__nccwpck_require__(7484));
 const getRemoteRepoName = () => {
     return core.getInput('remote-repository-name', { required: false });
@@ -1222,8 +1245,6 @@ const getBranch = () => core.getInput('branch', { required: false });
 exports.getBranch = getBranch;
 const getAllowListItem = () => core.getInput('allowlist', { required: false });
 exports.getAllowListItem = getAllowListItem;
-const getEmptyCommitFlag = () => getBooleanInput('empty-commit-flag');
-exports.getEmptyCommitFlag = getEmptyCommitFlag;
 const getSignedCommitMessage = () => core.getInput('signed-commit-message', { required: false });
 exports.getSignedCommitMessage = getSignedCommitMessage;
 const getCreateFileCommitMessage = () => core.getInput('create-file-commit-message', { required: false });
@@ -1295,7 +1316,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getPrSignComment = getPrSignComment;
 const input = __importStar(__nccwpck_require__(7189));
 function getPrSignComment() {
-    return input.getCustomPrSignComment() || "I have read the CLA Document and I hereby sign the CLA";
+    return (input.getCustomPrSignComment() ||
+        'I have read the CLA Document and I hereby sign the CLA');
 }
 
 

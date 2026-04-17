@@ -3,10 +3,10 @@ import * as input from '../shared/getInputs'
 import { getPrSignComment } from '../shared/pr-sign-comment'
 
 interface ModeText {
-  label: string          // 'CLA' | 'DCO'
-  documentTitle: string  // 'Contributor License Agreement' | 'Developer Certificate of Origin'
+  label: string // 'CLA' | 'DCO'
+  documentTitle: string // 'Contributor License Agreement' | 'Developer Certificate of Origin'
   defaultSignPhrase: string
-  botName: string        // 'CLA Assistant Lite bot' | 'DCO Assistant Lite bot'
+  botName: string // 'CLA Assistant Lite bot' | 'DCO Assistant Lite bot'
 }
 
 const CLA: ModeText = {
@@ -22,7 +22,10 @@ const DCO: ModeText = {
   botName: 'DCO Assistant Lite bot'
 }
 
-export function commentContent(signed: boolean, committerMap: CommitterMap): string {
+export function commentContent(
+  signed: boolean,
+  committerMap: CommitterMap
+): string {
   const mode = input.getUseDcoFlag() ? DCO : CLA
   return signed ? renderAllSigned(mode) : renderPending(mode, committerMap)
 }
@@ -74,7 +77,8 @@ function renderPending(mode: ModeText, committerMap: CommitterMap): string {
   }
 
   if (input.suggestRecheck()) {
-    text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>'
+    text +=
+      '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>'
   }
 
   text += botSignature(mode)

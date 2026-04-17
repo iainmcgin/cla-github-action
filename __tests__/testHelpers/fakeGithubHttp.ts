@@ -1,6 +1,10 @@
 import * as http from 'http'
-import {AddressInfo} from 'net'
-import {createFakeGitHubCore, FakeGitHubCore, FakeRepoHandle} from './fakeGithubCore'
+import { AddressInfo } from 'net'
+import {
+  createFakeGitHubCore,
+  FakeGitHubCore,
+  FakeRepoHandle
+} from './fakeGithubCore'
 
 /**
  * Real HTTP server variant of the fake. Binds a Node http.Server to
@@ -13,7 +17,7 @@ export interface FakeGitHubHttp {
   repo(owner: string, name: string): FakeRepoHandle
   recordedLocks: FakeGitHubCore['recordedLocks']
   recordedRerunRequests: FakeGitHubCore['recordedRerunRequests']
-  requestLog: Array<{method: string; path: string; status: number}>
+  requestLog: Array<{ method: string; path: string; status: number }>
   close(): Promise<void>
 }
 
@@ -26,8 +30,16 @@ export async function startFakeGitHubHttp(): Promise<FakeGitHubHttp> {
     req.on('data', c => chunks.push(c))
     req.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf-8')
-      const {status, body: out} = core.route(req.method || 'GET', req.url || '/', body)
-      requestLog.push({method: req.method || 'GET', path: req.url || '/', status})
+      const { status, body: out } = core.route(
+        req.method || 'GET',
+        req.url || '/',
+        body
+      )
+      requestLog.push({
+        method: req.method || 'GET',
+        path: req.url || '/',
+        status
+      })
       res.statusCode = status
       res.setHeader('content-type', 'application/json')
       res.end(out)

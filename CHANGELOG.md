@@ -9,6 +9,74 @@ the logical unit of work. Each entry links to the commit that introduced it.
 
 ## Unreleased
 
+### Code-review pass (April 2026)
+
+Driven by `PLAN.md` following a deep review. Seven phases:
+
+**Bug fixes** ([`c5254b2`](../../commit/c5254b2)):
+- Fixed a dead code path: `error.status === "404"` (string) vs `404` (number)
+  meant `createClaFileAndPRComment` never ran. First-time users can now bootstrap
+  a signatures file from scratch.
+- `signatureComment.ts` no longer mutates the returned comment objects when
+  stripping the `body` field.
+- `prCommentSetup` now posts an "all signed" bot comment when there is no prior
+  bot comment and every committer is already signed (previously a silent no-op).
+- Fixed broken Markdown in the "signed" list: `(name)[url]` → `[name](url)`.
+- `checkAllowList.ts`: renamed inverted `isUserNotInAllowList` to
+  `isUserAllowListed`, removed the dead `!== undefined` guard.
+- Replaced `console.debug` with `core.debug` in `pullRerunRunner.ts`.
+- Dropped the `.replace(/ /g, '')` whitespace strip on the GraphQL query.
+
+**Type cleanup** ([`142d247`](../../commit/142d247)):
+- Removed `noImplicitAny: false` and `useUnknownInCatchVariables: false` from
+  `tsconfig.json`. Fixed fallout (implicit-any parameters, catch narrowing).
+- Introduced `ClaFileContent` / `Signature` interfaces; deleted unused
+  `CommentedCommitterMap`, `LabelName`, `CommittersCommentDetails`.
+- Added `src/shared/errors.ts` with `errorMessage(err)` / `errorStatus(err)`
+  helpers for safer catch handling.
+
+**TypeScript 5 upgrade** ([`16fefb1`](../../commit/16fefb1)):
+- `typescript` `^4.9.4` → `^5.7.x`, `@types/jest` `^29` → `^30`.
+- Enabled `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
+
+**Structural refactors** ([`d5854d0`](../../commit/d5854d0)):
+- Lazy `octokit` factory that validates tokens on first use and has no
+  import-time side effects. Exports an `Octokit` type alias so callers no
+  longer reach into `@actions/github/lib/utils` (a private subpath).
+- Four boolean inputs (`use-dco-flag`, `lock-pullrequest-aftermerge`,
+  `empty-commit-flag`, `suggest-recheck`) now return real `boolean`s via a
+  shared `getBooleanInput()` helper; removed the scattered `'true' / 'false'`
+  string comparisons.
+- `persistence.ts`: extracted `resolveSignaturesTarget()` helper to collapse
+  three copy-paste bodies into one.
+
+**Template consolidation** ([`7e3e83b`](../../commit/7e3e83b)):
+- `pullRequestCommentContent.ts` `cla()` and `dco()` collapsed into a single
+  parameterized renderer (104 LOC → ~85). Fixed asymmetric
+  `****DCO Assistant Lite bot****` (4 asterisks) vs `**CLA Assistant Lite bot**`
+  (2 asterisks).
+
+**Pagination** ([`cac6d84`](../../commit/cac6d84)):
+- `listComments` / `getComment` use `octokit.paginate`, so PRs with >30
+  comments no longer silently drop signatures.
+- `graphql.ts` commits query follows `pageInfo.hasNextPage` for PRs with >100
+  commits.
+- `listWorkflowRuns` bumped to `per_page=100` (still reads only the newest run).
+
+**Tooling & residual cleanup** (this commit):
+- Added Prettier (`^3`) with the existing `.prettierrc.json`; added
+  `format` / `format:check` scripts. Formatted the repo.
+- Deleted the orphaned `src/addEmptyCommit.ts` module, its test, and the
+  `empty-commit-flag` input / `getEmptyCommitFlag` wrapper — no caller in `src/`
+  or `action.yml`.
+- `persistence.updateFile` no longer mutates the caller's `claFileContent`;
+  returns `Promise<void>` and builds a fresh object.
+- Normalised `lockPullRequest` logging to a single post-success / post-failure
+  line.
+- Deleted a stale `__tests__/testHelpers/env.js` that was shadowing the `.ts`.
+
+
+
 ### Added
 - **Unit + integration test harness.** ~60 new tests across three layers:
   pure-logic units for `checkAllowList`, `getInputs`, `commentContent`, and

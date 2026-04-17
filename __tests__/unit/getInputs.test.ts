@@ -1,4 +1,4 @@
-import {resetEnv, setInput} from '../testHelpers/env'
+import { resetEnv, setInput } from '../testHelpers/env'
 import * as inputs from '../../src/shared/getInputs'
 
 describe('getInputs wrappers', () => {
@@ -18,16 +18,18 @@ describe('getInputs wrappers', () => {
     ['getCustomPrSignComment', 'custom-pr-sign-comment']
   ]
   const booleanInputs: Array<[keyof typeof inputs, string]> = [
-    ['getEmptyCommitFlag', 'empty-commit-flag'],
     ['getUseDcoFlag', 'use-dco-flag'],
     ['lockPullRequestAfterMerge', 'lock-pullrequest-aftermerge'],
     ['suggestRecheck', 'suggest-recheck']
   ]
 
-  it.each(stringInputs)('%s reads the "%s" action input as a string', (fn, inputName) => {
-    setInput(inputName, 'expected-value')
-    expect((inputs[fn] as () => string)()).toBe('expected-value')
-  })
+  it.each(stringInputs)(
+    '%s reads the "%s" action input as a string',
+    (fn, inputName) => {
+      setInput(inputName, 'expected-value')
+      expect((inputs[fn] as () => string)()).toBe('expected-value')
+    }
+  )
 
   it.each(booleanInputs)('%s parses "%s" as a boolean', (fn, inputName) => {
     setInput(inputName, 'true')

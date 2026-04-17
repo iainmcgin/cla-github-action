@@ -13,17 +13,17 @@ export interface FileRecord {
 export interface Comment {
   id: number
   body: string
-  user: {login: string; id: number}
+  user: { login: string; id: number }
   created_at: string
 }
 
 export interface PullRequest {
   number: number
-  head: {sha: string; ref: string}
+  head: { sha: string; ref: string }
   merged?: boolean
   state?: 'open' | 'closed'
   commits: Array<{
-    author: {login?: string; name?: string; id?: number; email?: string}
+    author: { login?: string; name?: string; id?: number; email?: string }
   }>
 }
 
@@ -52,7 +52,10 @@ export interface FakeRepoHandle {
   setFile(path: string, contentJson: unknown): FakeRepoHandle
   getFile(path: string): unknown | undefined
   addPullRequest(pr: PullRequest): FakeRepoHandle
-  addComment(issueNumber: number, comment: Omit<Comment, 'id' | 'created_at'>): Comment
+  addComment(
+    issueNumber: number,
+    comment: Omit<Comment, 'id' | 'created_at'>
+  ): Comment
   listComments(issueNumber: number): Comment[]
   isLocked(issueNumber: number): boolean
   addWorkflow(name: string, runs?: WorkflowRun[]): Workflow
@@ -66,8 +69,8 @@ export interface RouteResult {
 
 export interface FakeGitHubCore {
   repo(owner: string, name: string): FakeRepoHandle
-  recordedLocks: Array<{owner: string; repo: string; issue: number}>
-  recordedRerunRequests: Array<{owner: string; repo: string; runId: number}>
+  recordedLocks: Array<{ owner: string; repo: string; issue: number }>
+  recordedRerunRequests: Array<{ owner: string; repo: string; runId: number }>
   route(method: string, rawPath: string, body: string): RouteResult
 }
 
@@ -100,10 +103,13 @@ export function createFakeGitHubCore(): FakeGitHubCore {
   }
 
   function json(status: number, body: unknown): RouteResult {
-    return {status, body: typeof body === 'string' ? body : JSON.stringify(body)}
+    return {
+      status,
+      body: typeof body === 'string' ? body : JSON.stringify(body)
+    }
   }
   function notFound(msg = 'not found'): RouteResult {
-    return json(404, {message: msg})
+    return json(404, { message: msg })
   }
 
   type Handler = (
@@ -129,21 +135,31 @@ export function createFakeGitHubCore(): FakeGitHubCore {
         }) +
         '$'
     )
-    list.push({re, handler})
+    list.push({ re, handler })
   }
 
-  function parsePath(raw: string): {pathname: string; query: URLSearchParams} {
-    const u = new URL(`https://api.github.com${raw.startsWith('/') ? raw : '/' + raw}`)
-    return {pathname: u.pathname, query: u.searchParams}
+  function parsePath(raw: string): {
+    pathname: string
+    query: URLSearchParams
+  } {
+    const u = new URL(
+      `https://api.github.com${raw.startsWith('/') ? raw : '/' + raw}`
+    )
+    return { pathname: u.pathname, query: u.searchParams }
   }
 
-  function dispatch(list: Route[], method: string, rawPath: string, body: string): RouteResult {
-    const {pathname, query} = parsePath(rawPath)
+  function dispatch(
+    list: Route[],
+    method: string,
+    rawPath: string,
+    body: string
+  ): RouteResult {
+    const { pathname, query } = parsePath(rawPath)
     for (const r of list) {
       const m = pathname.match(r.re)
       if (m) return r.handler(m, body, query)
     }
-    return json(404, {message: `no fake route for ${method} ${pathname}`})
+    return json(404, { message: `no fake route for ${method} ${pathname}` })
   }
 
   // ---------- GET ----------
@@ -154,7 +170,12 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     void query.get('ref')
     const f = getRepo(owner, name).files.get(path)
     if (!f) return notFound()
-    return json(200, {sha: f.sha, content: f.content, encoding: 'base64', path})
+    return json(200, {
+      sha: f.sha,
+      content: f.content,
+      encoding: 'base64',
+      path
+    })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/issues/:num/comments', m => {
     const owner = decodeURIComponent(m[1]!)
@@ -177,11 +198,11 @@ export function createFakeGitHubCore(): FakeGitHubCore {
   })
   addRoute(getRoutes, '/repos/:owner/:repo/git/commits/:sha', m => {
     const s = decodeURIComponent(m[3]!)
-    return json(200, {sha: s, tree: {sha: `tree-${s}`}})
+    return json(200, { sha: s, tree: { sha: `tree-${s}` } })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/git/trees/:sha', m => {
     const s = decodeURIComponent(m[3]!)
-    return json(200, {sha: s, tree: []})
+    return json(200, { sha: s, tree: [] })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/workflows', m => {
     const owner = decodeURIComponent(m[1]!)
@@ -189,7 +210,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     const repo = getRepo(owner, name)
     return json(200, {
       total_count: repo.workflows.length,
-      workflows: repo.workflows.map(w => ({id: w.id, name: w.name}))
+      workflows: repo.workflows.map(w => ({ id: w.id, name: w.name }))
     })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/workflows/:id/runs', m => {
@@ -200,7 +221,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     if (!wf) return notFound()
     return json(200, {
       total_count: wf.runs.length,
-      workflow_runs: wf.runs.map(r => ({id: r.id, conclusion: r.conclusion}))
+      workflow_runs: wf.runs.map(r => ({ id: r.id, conclusion: r.conclusion }))
     })
   })
   addRoute(getRoutes, '/repos/:owner/:repo/actions/runs/:id', m => {
@@ -209,7 +230,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     const id = parseInt(m[3]!, 10)
     for (const wf of getRepo(owner, name).workflows) {
       const r = wf.runs.find(run => run.id === id)
-      if (r) return json(200, {id: r.id, conclusion: r.conclusion})
+      if (r) return json(200, { id: r.id, conclusion: r.conclusion })
     }
     return notFound()
   })
@@ -222,36 +243,43 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     const repo = getRepo(owner, name)
     const parsed = JSON.parse(body || '{}')
     const newSha = sha(repo.nextShaCounter++, 'file')
-    repo.files.set(path, {sha: newSha, content: parsed.content})
-    return json(200, {content: {sha: newSha, path}, commit: {sha: `commit-${newSha}`}})
+    repo.files.set(path, { sha: newSha, content: parsed.content })
+    return json(200, {
+      content: { sha: newSha, path },
+      commit: { sha: `commit-${newSha}` }
+    })
   })
   addRoute(putRoutes, '/repos/:owner/:repo/issues/:num/lock', m => {
     const owner = decodeURIComponent(m[1]!)
     const name = decodeURIComponent(m[2]!)
     const num = parseInt(m[3]!, 10)
-    recordedLocks.push({owner, repo: name, issue: num})
-    return {status: 204, body: ''}
+    recordedLocks.push({ owner, repo: name, issue: num })
+    return { status: 204, body: '' }
   })
 
   // ---------- POST ----------
-  addRoute(postRoutes, '/repos/:owner/:repo/issues/:num/comments', (m, body) => {
-    const owner = decodeURIComponent(m[1]!)
-    const name = decodeURIComponent(m[2]!)
-    const num = parseInt(m[3]!, 10)
-    const parsed = JSON.parse(body || '{}')
-    const repo = getRepo(owner, name)
-    const id = repo.nextCommentId++
-    const comment: Comment = {
-      id,
-      body: parsed.body,
-      user: {login: 'github-actions[bot]', id: 41898282},
-      created_at: new Date().toISOString()
+  addRoute(
+    postRoutes,
+    '/repos/:owner/:repo/issues/:num/comments',
+    (m, body) => {
+      const owner = decodeURIComponent(m[1]!)
+      const name = decodeURIComponent(m[2]!)
+      const num = parseInt(m[3]!, 10)
+      const parsed = JSON.parse(body || '{}')
+      const repo = getRepo(owner, name)
+      const id = repo.nextCommentId++
+      const comment: Comment = {
+        id,
+        body: parsed.body,
+        user: { login: 'github-actions[bot]', id: 41898282 },
+        created_at: new Date().toISOString()
+      }
+      const list = repo.comments.get(num) || []
+      list.push(comment)
+      repo.comments.set(num, list)
+      return json(201, comment)
     }
-    const list = repo.comments.get(num) || []
-    list.push(comment)
-    repo.comments.set(num, list)
-    return json(201, comment)
-  })
+  )
   addRoute(postRoutes, '/repos/:owner/:repo/git/commits', (m, body) => {
     const owner = decodeURIComponent(m[1]!)
     const name = decodeURIComponent(m[2]!)
@@ -260,35 +288,42 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     const newSha = sha(repo.nextShaCounter++, 'commit')
     return json(201, {
       sha: newSha,
-      tree: {sha: parsed.tree},
-      parents: (parsed.parents || []).map((p: string) => ({sha: p}))
+      tree: { sha: parsed.tree },
+      parents: (parsed.parents || []).map((p: string) => ({ sha: p }))
     })
   })
   addRoute(postRoutes, '/repos/:owner/:repo/actions/runs/:id/rerun', m => {
     const owner = decodeURIComponent(m[1]!)
     const name = decodeURIComponent(m[2]!)
     const id = parseInt(m[3]!, 10)
-    recordedRerunRequests.push({owner, repo: name, runId: id})
-    return {status: 201, body: ''}
+    recordedRerunRequests.push({ owner, repo: name, runId: id })
+    return { status: 201, body: '' }
   })
 
   // ---------- PATCH ----------
-  addRoute(patchRoutes, '/repos/:owner/:repo/issues/comments/:id', (m, body) => {
-    const owner = decodeURIComponent(m[1]!)
-    const name = decodeURIComponent(m[2]!)
-    const id = parseInt(m[3]!, 10)
-    const parsed = JSON.parse(body || '{}')
-    for (const list of getRepo(owner, name).comments.values()) {
-      const c = list.find(c => c.id === id)
-      if (c) {
-        c.body = parsed.body
-        return json(200, c)
+  addRoute(
+    patchRoutes,
+    '/repos/:owner/:repo/issues/comments/:id',
+    (m, body) => {
+      const owner = decodeURIComponent(m[1]!)
+      const name = decodeURIComponent(m[2]!)
+      const id = parseInt(m[3]!, 10)
+      const parsed = JSON.parse(body || '{}')
+      for (const list of getRepo(owner, name).comments.values()) {
+        const c = list.find(c => c.id === id)
+        if (c) {
+          c.body = parsed.body
+          return json(200, c)
+        }
       }
+      return notFound()
     }
-    return notFound()
-  })
+  )
   addRoute(patchRoutes, '/repos/:owner/:repo/git/refs/heads/:branch', m => {
-    return json(200, {ref: `refs/heads/${decodeURIComponent(m[3]!)}`, object: {sha: 'newref'}})
+    return json(200, {
+      ref: `refs/heads/${decodeURIComponent(m[3]!)}`,
+      object: { sha: 'newref' }
+    })
   })
 
   function handleGraphQL(body: string): RouteResult {
@@ -301,7 +336,11 @@ export function createFakeGitHubCore(): FakeGitHubCore {
         data: {
           repository: {
             pullRequest: {
-              commits: {totalCount: 0, edges: [], pageInfo: {endCursor: null, hasNextPage: false}}
+              commits: {
+                totalCount: 0,
+                edges: [],
+                pageInfo: { endCursor: null, hasNextPage: false }
+              }
             }
           }
         }
@@ -313,10 +352,14 @@ export function createFakeGitHubCore(): FakeGitHubCore {
             email: c.author.email || '',
             name: c.author.name || c.author.login || '',
             user: c.author.login
-              ? {id: `MDQ6VXNl${c.author.id}`, databaseId: c.author.id, login: c.author.login}
+              ? {
+                  id: `MDQ6VXNl${c.author.id}`,
+                  databaseId: c.author.id,
+                  login: c.author.login
+                }
               : null
           },
-          committer: {name: c.author.name || c.author.login || '', user: null}
+          committer: { name: c.author.name || c.author.login || '', user: null }
         }
       },
       cursor: 'c1'
@@ -328,7 +371,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
             commits: {
               totalCount: edges.length,
               edges,
-              pageInfo: {endCursor: 'c1', hasNextPage: false}
+              pageInfo: { endCursor: 'c1', hasNextPage: false }
             }
           }
         }
@@ -337,7 +380,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
   }
 
   function route(method: string, rawPath: string, body: string): RouteResult {
-    const {pathname} = parsePath(rawPath)
+    const { pathname } = parsePath(rawPath)
     const m = method.toUpperCase()
     if (m === 'POST' && pathname === '/graphql') return handleGraphQL(body)
     switch (m) {
@@ -350,9 +393,9 @@ export function createFakeGitHubCore(): FakeGitHubCore {
       case 'PATCH':
         return dispatch(patchRoutes, m, rawPath, body)
       case 'DELETE':
-        return json(404, {message: 'not found'})
+        return json(404, { message: 'not found' })
       default:
-        return json(405, {message: `method ${m} not allowed`})
+        return json(405, { message: `method ${m} not allowed` })
     }
   }
 
@@ -362,9 +405,11 @@ export function createFakeGitHubCore(): FakeGitHubCore {
       state: repo,
       setFile(p, contentJson) {
         const content = Buffer.from(
-          typeof contentJson === 'string' ? contentJson : JSON.stringify(contentJson)
+          typeof contentJson === 'string'
+            ? contentJson
+            : JSON.stringify(contentJson)
         ).toString('base64')
-        repo.files.set(p, {sha: sha(repo.nextShaCounter++, 'init'), content})
+        repo.files.set(p, { sha: sha(repo.nextShaCounter++, 'init'), content })
         return this
       },
       getFile(p) {
@@ -373,12 +418,16 @@ export function createFakeGitHubCore(): FakeGitHubCore {
         return JSON.parse(Buffer.from(f.content, 'base64').toString())
       },
       addPullRequest(pr) {
-        repo.pulls.set(pr.number, {...pr})
+        repo.pulls.set(pr.number, { ...pr })
         return this
       },
       addComment(issueNumber, c) {
         const id = repo.nextCommentId++
-        const comment: Comment = {id, created_at: new Date().toISOString(), ...c}
+        const comment: Comment = {
+          id,
+          created_at: new Date().toISOString(),
+          ...c
+        }
         const list = repo.comments.get(issueNumber) || []
         list.push(comment)
         repo.comments.set(issueNumber, list)
@@ -393,7 +442,11 @@ export function createFakeGitHubCore(): FakeGitHubCore {
         )
       },
       addWorkflow(name_, runs = []) {
-        const wf: Workflow = {id: 10000 + repo.workflows.length, name: name_, runs}
+        const wf: Workflow = {
+          id: 10000 + repo.workflows.length,
+          name: name_,
+          runs
+        }
         repo.workflows.push(wf)
         return wf
       }

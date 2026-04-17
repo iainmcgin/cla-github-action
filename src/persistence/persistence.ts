@@ -52,12 +52,19 @@ export async function updateFile(
   sha: string,
   claFileContent: ClaFileContent,
   reactedCommitters: ReactedCommitterMap
-): Promise<any> {
+): Promise<void> {
   const t = resolveSignaturesTarget()
   const pullRequestNo = context.issue.number
 
-  claFileContent.signedContributors.push(...reactedCommitters.newSigned)
-  const contentBinary = Buffer.from(JSON.stringify(claFileContent, null, 2)).toString('base64')
+  const updated: ClaFileContent = {
+    signedContributors: [
+      ...claFileContent.signedContributors,
+      ...reactedCommitters.newSigned
+    ]
+  }
+  const contentBinary = Buffer.from(JSON.stringify(updated, null, 2)).toString(
+    'base64'
+  )
 
   await t.octokit.rest.repos.createOrUpdateFileContents({
     owner: t.owner,

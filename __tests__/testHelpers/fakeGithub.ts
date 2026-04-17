@@ -1,4 +1,4 @@
-import {MockAgent, setGlobalDispatcher, getGlobalDispatcher} from 'undici'
+import { MockAgent, setGlobalDispatcher, getGlobalDispatcher } from 'undici'
 import {
   createFakeGitHubCore,
   FakeGitHubCore,
@@ -29,20 +29,17 @@ export function installFakeGitHub(): FakeGitHub {
   function makeReply(method: string) {
     return (opts: any) => {
       const rawBody = typeof opts.body === 'string' ? opts.body : ''
-      const {status, body} = core.route(method, opts.path, rawBody)
+      const { status, body } = core.route(method, opts.path, rawBody)
       return {
         statusCode: status,
         data: body,
-        responseOptions: {headers: {'content-type': 'application/json'}}
+        responseOptions: { headers: { 'content-type': 'application/json' } }
       }
     }
   }
 
   for (const method of ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const) {
-    pool
-      .intercept({path: /.*/, method})
-      .reply(makeReply(method))
-      .persist()
+    pool.intercept({ path: /.*/, method }).reply(makeReply(method)).persist()
   }
 
   return {
