@@ -61,13 +61,10 @@ async function getComment() {
   try {
     const response = await octokit.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number })
 
-    //TODO: check the below regex
-    // using a `string` true or false purposely as github action input cannot have a boolean value
-    if (getUseDcoFlag() === 'true') {
-      return response.data.find(comment => comment.body?.match(/.*DCO Assistant Lite bot.*/m))
-    } else if (getUseDcoFlag() === 'false') {
-      return response.data.find(comment => comment.body?.match(/.*CLA Assistant Lite bot.*/m))
-    }
+    const marker = getUseDcoFlag()
+      ? /.*DCO Assistant Lite bot.*/m
+      : /.*CLA Assistant Lite bot.*/m
+    return response.data.find(comment => comment.body?.match(marker))
   } catch (error) {
     throw new Error(`Error occured when getting  all the comments of the pull request: ${errorMessage(error)}`)
   }

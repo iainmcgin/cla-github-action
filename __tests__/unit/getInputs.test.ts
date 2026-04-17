@@ -4,25 +4,40 @@ import * as inputs from '../../src/shared/getInputs'
 describe('getInputs wrappers', () => {
   afterEach(resetEnv)
 
-  it.each<[keyof typeof inputs, string]>([
+  const stringInputs: Array<[keyof typeof inputs, string]> = [
     ['getRemoteRepoName', 'remote-repository-name'],
     ['getRemoteOrgName', 'remote-organization-name'],
     ['getPathToSignatures', 'path-to-signatures'],
     ['getPathToDocument', 'path-to-document'],
     ['getBranch', 'branch'],
     ['getAllowListItem', 'allowlist'],
-    ['getEmptyCommitFlag', 'empty-commit-flag'],
     ['getSignedCommitMessage', 'signed-commit-message'],
     ['getCreateFileCommitMessage', 'create-file-commit-message'],
     ['getCustomNotSignedPrComment', 'custom-notsigned-prcomment'],
     ['getCustomAllSignedPrComment', 'custom-allsigned-prcomment'],
+    ['getCustomPrSignComment', 'custom-pr-sign-comment']
+  ]
+  const booleanInputs: Array<[keyof typeof inputs, string]> = [
+    ['getEmptyCommitFlag', 'empty-commit-flag'],
     ['getUseDcoFlag', 'use-dco-flag'],
-    ['getCustomPrSignComment', 'custom-pr-sign-comment'],
     ['lockPullRequestAfterMerge', 'lock-pullrequest-aftermerge'],
     ['suggestRecheck', 'suggest-recheck']
-  ])('%s reads the "%s" action input', (fn, inputName) => {
+  ]
+
+  it.each(stringInputs)('%s reads the "%s" action input as a string', (fn, inputName) => {
     setInput(inputName, 'expected-value')
     expect((inputs[fn] as () => string)()).toBe('expected-value')
+  })
+
+  it.each(booleanInputs)('%s parses "%s" as a boolean', (fn, inputName) => {
+    setInput(inputName, 'true')
+    expect((inputs[fn] as () => boolean)()).toBe(true)
+    setInput(inputName, 'false')
+    expect((inputs[fn] as () => boolean)()).toBe(false)
+    setInput(inputName, 'TRUE')
+    expect((inputs[fn] as () => boolean)()).toBe(true)
+    setInput(inputName, '')
+    expect((inputs[fn] as () => boolean)()).toBe(false)
   })
 
   it('returns an empty string when the input is unset', () => {

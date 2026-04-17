@@ -9,12 +9,9 @@ export async function run() {
   try {
     core.info(`CLA Assistant GitHub Action bot has started the process`)
 
-    /*
-     * using a `string` true or false purposely as github action input cannot have a boolean value
-     */
     if (
       context.payload.action === 'closed' &&
-      input.lockPullRequestAfterMerge() == 'true'
+      input.lockPullRequestAfterMerge()
     ) {
       return lockPullRequest()
     } else {

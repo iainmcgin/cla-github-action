@@ -218,11 +218,8 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             core.info(`CLA Assistant GitHub Action bot has started the process`);
-            /*
-             * using a `string` true or false purposely as github action input cannot have a boolean value
-             */
             if (github_1.context.payload.action === 'closed' &&
-                input.lockPullRequestAfterMerge() == 'true') {
+                input.lockPullRequestAfterMerge()) {
                 return (0, pullRequestLock_1.lockPullRequest)();
             }
             else {
@@ -285,22 +282,53 @@ exports.octokit = void 0;
 exports.getDefaultOctokitClient = getDefaultOctokitClient;
 exports.getPATOctokit = getPATOctokit;
 exports.isPersonalAccessTokenPresent = isPersonalAccessTokenPresent;
+exports._resetOctokitClientsForTests = _resetOctokitClientsForTests;
 const github_1 = __nccwpck_require__(3228);
 const core = __importStar(__nccwpck_require__(7484));
-const githubActionsDefaultToken = process.env.GITHUB_TOKEN;
-const personalAccessToken = process.env.PERSONAL_ACCESS_TOKEN;
-exports.octokit = (0, github_1.getOctokit)(githubActionsDefaultToken);
+let defaultClient;
+let patClient;
+function readEnvToken(name) {
+    const v = process.env[name];
+    if (!v)
+        throw new Error(`${name} environment variable is required`);
+    return v;
+}
 function getDefaultOctokitClient() {
-    return (0, github_1.getOctokit)(githubActionsDefaultToken);
+    if (!defaultClient) {
+        defaultClient = (0, github_1.getOctokit)(readEnvToken('GITHUB_TOKEN'));
+    }
+    return defaultClient;
 }
 function getPATOctokit() {
-    if (!isPersonalAccessTokenPresent()) {
-        core.setFailed(`Please add a personal access token as an environment variable for writing signatures in a remote repository/organization as mentioned in the README.md file`);
+    if (!patClient) {
+        const token = process.env.PERSONAL_ACCESS_TOKEN;
+        if (!token) {
+            core.setFailed(`Please add a personal access token as an environment variable for writing signatures in a remote repository/organization as mentioned in the README.md file`);
+            throw new Error('PERSONAL_ACCESS_TOKEN is required for remote signatures repo');
+        }
+        patClient = (0, github_1.getOctokit)(token);
     }
-    return (0, github_1.getOctokit)(personalAccessToken);
+    return patClient;
 }
+/**
+ * The default client used for all non-remote-repo operations. Lazily
+ * constructed on first property access so importing this module has no
+ * side effects.
+ */
+exports.octokit = new Proxy({}, {
+    get(_target, prop) {
+        const client = getDefaultOctokitClient();
+        const value = client[prop];
+        return typeof value === 'function' ? value.bind(client) : value;
+    }
+});
 function isPersonalAccessTokenPresent() {
-    return personalAccessToken !== undefined && personalAccessToken !== '';
+    return Boolean(process.env.PERSONAL_ACCESS_TOKEN);
+}
+/** For tests: reset cached clients so a subsequent call picks up new env. */
+function _resetOctokitClientsForTests() {
+    defaultClient = undefined;
+    patClient = undefined;
 }
 
 
@@ -360,66 +388,70 @@ exports.updateFile = updateFile;
 const github_1 = __nccwpck_require__(3228);
 const octokit_1 = __nccwpck_require__(5957);
 const input = __importStar(__nccwpck_require__(7189));
+function resolveSignaturesTarget() {
+    const remote = Boolean(input.getRemoteRepoName() || input.getRemoteOrgName());
+    return {
+        octokit: remote ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)(),
+        owner: input.getRemoteOrgName() || github_1.context.repo.owner,
+        repo: input.getRemoteRepoName() || github_1.context.repo.repo,
+        path: input.getPathToSignatures(),
+        branch: input.getBranch()
+    };
+}
 function getFileContent() {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokitInstance = isRemoteRepoOrOrgConfigured() ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)();
-        const result = yield octokitInstance.rest.repos.getContent({
-            owner: input.getRemoteOrgName() || github_1.context.repo.owner,
-            repo: input.getRemoteRepoName() || github_1.context.repo.repo,
-            path: input.getPathToSignatures(),
-            ref: input.getBranch()
+        const t = resolveSignaturesTarget();
+        return t.octokit.rest.repos.getContent({
+            owner: t.owner,
+            repo: t.repo,
+            path: t.path,
+            ref: t.branch
         });
-        return result;
     });
 }
 function createFile(contentBinary) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokitInstance = isRemoteRepoOrOrgConfigured() ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)();
-        return octokitInstance.rest.repos.createOrUpdateFileContents({
-            owner: input.getRemoteOrgName() || github_1.context.repo.owner,
-            repo: input.getRemoteRepoName() || github_1.context.repo.repo,
-            path: input.getPathToSignatures(),
+        const t = resolveSignaturesTarget();
+        return t.octokit.rest.repos.createOrUpdateFileContents({
+            owner: t.owner,
+            repo: t.repo,
+            path: t.path,
             message: input.getCreateFileCommitMessage() ||
                 'Creating file for storing CLA Signatures',
             content: contentBinary,
-            branch: input.getBranch()
+            branch: t.branch
         });
     });
 }
 function updateFile(sha, claFileContent, reactedCommitters) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokitInstance = isRemoteRepoOrOrgConfigured() ? (0, octokit_1.getPATOctokit)() : (0, octokit_1.getDefaultOctokitClient)();
+        const t = resolveSignaturesTarget();
         const pullRequestNo = github_1.context.issue.number;
-        const owner = github_1.context.issue.owner;
-        const repo = github_1.context.issue.repo;
         claFileContent.signedContributors.push(...reactedCommitters.newSigned);
-        let contentString = JSON.stringify(claFileContent, null, 2);
-        let contentBinary = Buffer.from(contentString).toString('base64');
-        yield octokitInstance.rest.repos.createOrUpdateFileContents({
-            owner: input.getRemoteOrgName() || github_1.context.repo.owner,
-            repo: input.getRemoteRepoName() || github_1.context.repo.repo,
-            path: input.getPathToSignatures(),
+        const contentBinary = Buffer.from(JSON.stringify(claFileContent, null, 2)).toString('base64');
+        yield t.octokit.rest.repos.createOrUpdateFileContents({
+            owner: t.owner,
+            repo: t.repo,
+            path: t.path,
             sha,
-            message: input.getSignedCommitMessage()
-                ? input
-                    .getSignedCommitMessage()
-                    .replace('$contributorName', github_1.context.actor)
-                    .replace('$pullRequestNo', pullRequestNo.toString())
-                    .replace('$owner', owner)
-                    .replace('$repo', repo)
-                : `@${github_1.context.actor} has signed the CLA in ${owner}/${repo}#${pullRequestNo}`,
+            message: buildSignedCommitMessage(pullRequestNo),
             content: contentBinary,
-            branch: input.getBranch()
+            branch: t.branch
         });
     });
 }
-function isRemoteRepoOrOrgConfigured() {
-    let isRemoteRepoOrOrgConfigured = false;
-    if ((input === null || input === void 0 ? void 0 : input.getRemoteRepoName()) || input.getRemoteOrgName()) {
-        isRemoteRepoOrOrgConfigured = true;
-        return isRemoteRepoOrOrgConfigured;
+function buildSignedCommitMessage(pullRequestNo) {
+    const template = input.getSignedCommitMessage();
+    const owner = github_1.context.issue.owner;
+    const repo = github_1.context.issue.repo;
+    if (!template) {
+        return `@${github_1.context.actor} has signed the CLA in ${owner}/${repo}#${pullRequestNo}`;
     }
-    return isRemoteRepoOrOrgConfigured;
+    return template
+        .replace('$contributorName', github_1.context.actor)
+        .replace('$pullRequestNo', pullRequestNo.toString())
+        .replace('$owner', owner)
+        .replace('$repo', repo);
 }
 
 
@@ -645,14 +677,10 @@ function getComment() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const response = yield octokit_1.octokit.rest.issues.listComments({ owner: github_1.context.repo.owner, repo: github_1.context.repo.repo, issue_number: github_1.context.issue.number });
-            //TODO: check the below regex
-            // using a `string` true or false purposely as github action input cannot have a boolean value
-            if ((0, getInputs_1.getUseDcoFlag)() === 'true') {
-                return response.data.find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.match(/.*DCO Assistant Lite bot.*/m); });
-            }
-            else if ((0, getInputs_1.getUseDcoFlag)() === 'false') {
-                return response.data.find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.match(/.*CLA Assistant Lite bot.*/m); });
-            }
+            const marker = (0, getInputs_1.getUseDcoFlag)()
+                ? /.*DCO Assistant Lite bot.*/m
+                : /.*CLA Assistant Lite bot.*/m;
+            return response.data.find(comment => { var _a; return (_a = comment.body) === null || _a === void 0 ? void 0 : _a.match(marker); });
         }
         catch (error) {
             throw new Error(`Error occured when getting  all the comments of the pull request: ${(0, errors_1.errorMessage)(error)}`);
@@ -724,8 +752,7 @@ exports.commentContent = commentContent;
 const input = __importStar(__nccwpck_require__(7189));
 const pr_sign_comment_1 = __nccwpck_require__(7228);
 function commentContent(signed, committerMap) {
-    // using a `string` true or false purposely as github action input cannot have a boolean value
-    if (input.getUseDcoFlag() == 'true') {
+    if (input.getUseDcoFlag()) {
         return dco(signed, committerMap);
     }
     else {
@@ -763,7 +790,7 @@ function dco(signed, committerMap) {
         text += `**${committerNames.join(", ")}** ${seem} not to be a GitHub user.`;
         text += ' You need a GitHub account to be able to sign the DCO. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>';
     }
-    if (input.suggestRecheck() == 'true') {
+    if (input.suggestRecheck()) {
         text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
     }
     text += '<sub>Posted by the ****DCO Assistant Lite bot****.</sub>';
@@ -800,7 +827,7 @@ function cla(signed, committerMap) {
         text += `**${committerNames.join(", ")}** ${seem} not to be a GitHub user.`;
         text += ' You need a GitHub account to be able to sign the CLA. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>';
     }
-    if (input.suggestRecheck() == 'true') {
+    if (input.suggestRecheck()) {
         text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>';
     }
     text += '<sub>Posted by the **CLA Assistant Lite bot**.</sub>';
@@ -964,15 +991,10 @@ function isCommentSignedByUser(comment, commentAuthor) {
     if ((0, getInputs_1.getCustomPrSignComment)() !== "") {
         return (0, getInputs_1.getCustomPrSignComment)().toLowerCase() === comment;
     }
-    // using a `string` true or false purposely as github action input cannot have a boolean value
-    switch ((0, getInputs_1.getUseDcoFlag)()) {
-        case 'true':
-            return comment.match(/^.*i \s*have \s*read \s*the \s*dco \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*dco.*$/) !== null;
-        case 'false':
-            return comment.match(/^.*i \s*have \s*read \s*the \s*cla \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*cla.*$/) !== null;
-        default:
-            return false;
-    }
+    const signaturePattern = (0, getInputs_1.getUseDcoFlag)()
+        ? /^.*i \s*have \s*read \s*the \s*dco \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*dco.*$/
+        : /^.*i \s*have \s*read \s*the \s*cla \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*cla.*$/;
+    return comment.match(signaturePattern) !== null;
 }
 
 
@@ -1215,7 +1237,7 @@ const getBranch = () => core.getInput('branch', { required: false });
 exports.getBranch = getBranch;
 const getAllowListItem = () => core.getInput('allowlist', { required: false });
 exports.getAllowListItem = getAllowListItem;
-const getEmptyCommitFlag = () => core.getInput('empty-commit-flag', { required: false });
+const getEmptyCommitFlag = () => getBooleanInput('empty-commit-flag');
 exports.getEmptyCommitFlag = getEmptyCommitFlag;
 const getSignedCommitMessage = () => core.getInput('signed-commit-message', { required: false });
 exports.getSignedCommitMessage = getSignedCommitMessage;
@@ -1225,14 +1247,23 @@ const getCustomNotSignedPrComment = () => core.getInput('custom-notsigned-prcomm
 exports.getCustomNotSignedPrComment = getCustomNotSignedPrComment;
 const getCustomAllSignedPrComment = () => core.getInput('custom-allsigned-prcomment', { required: false });
 exports.getCustomAllSignedPrComment = getCustomAllSignedPrComment;
-const getUseDcoFlag = () => core.getInput('use-dco-flag', { required: false });
+const getUseDcoFlag = () => getBooleanInput('use-dco-flag');
 exports.getUseDcoFlag = getUseDcoFlag;
 const getCustomPrSignComment = () => core.getInput('custom-pr-sign-comment', { required: false });
 exports.getCustomPrSignComment = getCustomPrSignComment;
-const lockPullRequestAfterMerge = () => core.getInput('lock-pullrequest-aftermerge', { required: false });
+const lockPullRequestAfterMerge = () => getBooleanInput('lock-pullrequest-aftermerge');
 exports.lockPullRequestAfterMerge = lockPullRequestAfterMerge;
-const suggestRecheck = () => core.getInput('suggest-recheck', { required: false });
+const suggestRecheck = () => getBooleanInput('suggest-recheck');
 exports.suggestRecheck = suggestRecheck;
+/**
+ * Parses the action input as a boolean, tolerating unset / empty. Actions
+ * accept only strings; 'true' / 'false' (case-insensitive) are the supported
+ * values. Anything else — including an unset input — returns false.
+ */
+function getBooleanInput(name) {
+    const raw = core.getInput(name, { required: false }).toLowerCase().trim();
+    return raw === 'true';
+}
 
 
 /***/ }),

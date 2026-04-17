@@ -20,8 +20,8 @@ export const getBranch = (): string =>
 export const getAllowListItem = (): string =>
   core.getInput('allowlist', { required: false })
 
-export const getEmptyCommitFlag = (): string =>
-  core.getInput('empty-commit-flag', { required: false })
+export const getEmptyCommitFlag = (): boolean =>
+  getBooleanInput('empty-commit-flag')
 
 export const getSignedCommitMessage = (): string =>
   core.getInput('signed-commit-message', { required: false })
@@ -35,14 +35,24 @@ export const getCustomNotSignedPrComment = (): string =>
 export const getCustomAllSignedPrComment = (): string =>
   core.getInput('custom-allsigned-prcomment', { required: false })
 
-export const getUseDcoFlag = (): string =>
-  core.getInput('use-dco-flag', { required: false })
+export const getUseDcoFlag = (): boolean =>
+  getBooleanInput('use-dco-flag')
 
 export const getCustomPrSignComment = (): string =>
   core.getInput('custom-pr-sign-comment', { required: false })
 
-export const lockPullRequestAfterMerge = (): string =>
-  core.getInput('lock-pullrequest-aftermerge', { required: false })
+export const lockPullRequestAfterMerge = (): boolean =>
+  getBooleanInput('lock-pullrequest-aftermerge')
 
-export const suggestRecheck = (): string =>
-  core.getInput('suggest-recheck', { required: false })
+export const suggestRecheck = (): boolean =>
+  getBooleanInput('suggest-recheck')
+
+/**
+ * Parses the action input as a boolean, tolerating unset / empty. Actions
+ * accept only strings; 'true' / 'false' (case-insensitive) are the supported
+ * values. Anything else — including an unset input — returns false.
+ */
+function getBooleanInput(name: string): boolean {
+  const raw = core.getInput(name, { required: false }).toLowerCase().trim()
+  return raw === 'true'
+}

@@ -5,8 +5,7 @@ import * as input from '../shared/getInputs'
 import { getPrSignComment } from '../shared/pr-sign-comment'
 
 export function commentContent(signed: boolean, committerMap: CommitterMap): string {
-    // using a `string` true or false purposely as github action input cannot have a boolean value
-    if (input.getUseDcoFlag() == 'true') {
+    if (input.getUseDcoFlag()) {
         return dco(signed, committerMap)
     } else {
         return cla(signed, committerMap)
@@ -51,7 +50,7 @@ function dco(signed: boolean, committerMap: CommitterMap): string {
         text += ' You need a GitHub account to be able to sign the DCO. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>'
     }
 
-    if (input.suggestRecheck() == 'true') {
+    if (input.suggestRecheck()) {
         text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>'
     }
     text += '<sub>Posted by the ****DCO Assistant Lite bot****.</sub>'
@@ -96,7 +95,7 @@ function cla(signed: boolean, committerMap: CommitterMap): string {
         text += ' You need a GitHub account to be able to sign the CLA. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>'
     }
 
-    if (input.suggestRecheck() == 'true') {
+    if (input.suggestRecheck()) {
         text += '<sub>You can retrigger this bot by commenting **recheck** in this Pull Request. </sub>'
     }
     text += '<sub>Posted by the **CLA Assistant Lite bot**.</sub>'
