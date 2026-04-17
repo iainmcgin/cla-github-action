@@ -1,22 +1,27 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import { context } from '@actions/github'
-import { getclas } from '../src/checkcla'
-import { lockPullRequest } from '../src/pullRequestLock'
+import { setupClaCheck } from '../src/setupClaCheck'
+import { lockPullRequest } from '../src/pullrequest/pullRequestLock'
 import { run } from '../src/main'
-import { mocked } from 'ts-jest/utils'
 
 jest.mock('@actions/core')
 jest.mock('@actions/github')
-jest.mock('../src/pullRequestLock')
-jest.mock('../src/checkcla')
-const mockedGetClas = mocked(getclas)
-const mockedLockPullRequest = mocked(lockPullRequest)
+jest.mock('../src/pullrequest/pullRequestLock')
+jest.mock('../src/setupClaCheck')
+const mockedGetClas = jest.mocked(setupClaCheck)
+const mockedLockPullRequest = jest.mocked(lockPullRequest)
+const mockedCoreGetInput = jest.mocked(core.getInput)
 
 
 describe('Pull request event', () => {
 
   beforeEach(async () => {
+    mockedGetClas.mockReset()
+    mockedLockPullRequest.mockReset()
+    mockedCoreGetInput.mockImplementation((name: string) =>
+      name === 'lock-pullrequest-aftermerge' ? 'true' : ''
+    )
     // @ts-ignore
     github.context = {
       eventName: 'pull_request',
