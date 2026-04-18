@@ -1,36 +1,36 @@
 import { octokit } from '../octokit'
 import { context } from '@actions/github'
 import {
+  Committer,
   CommitterMap,
-  CommittersDetails,
-  ReactedCommitterMap
+  ReactedCommitterMap,
+  SigningComment
 } from '../interfaces'
 import { getUseDcoFlag, getCustomPrSignComment } from '../shared/getInputs'
 
-import * as core from '@actions/core'
-
 export default async function signatureWithPRComment(
   committerMap: CommitterMap,
-  committers: CommittersDetails[]
+  committers: Committer[]
 ): Promise<ReactedCommitterMap> {
-  let repoId = context.payload.repository!.id
+  const repoId = context.payload.repository?.id
   const allComments = await octokit.paginate(octokit.rest.issues.listComments, {
     owner: context.repo.owner,
     repo: context.repo.repo,
     issue_number: context.issue.number,
     per_page: 100
   })
-  let listOfPRComments = [] as CommittersDetails[]
-  let filteredListOfPRComments = [] as CommittersDetails[]
+  const listOfPRComments: SigningComment[] = []
+  const filteredListOfPRComments: SigningComment[] = []
 
   for (const prComment of allComments) {
+    if (!prComment.user) continue
     listOfPRComments.push({
-      name: prComment.user!.login,
-      id: prComment.user!.id,
+      name: prComment.user.login,
+      id: prComment.user.id,
       comment_id: prComment.id,
       body: prComment.body?.trim().toLowerCase(),
       created_at: prComment.created_at,
-      repoId: repoId,
+      repoId,
       pullRequestNo: context.issue.number
     })
   }
@@ -52,7 +52,7 @@ export default async function signatureWithPRComment(
   /*
    * checking if the commented users are only the contributors who has committed in the same PR (This is needed for the PR Comment and changing the status to success when all the contributors has reacted to the PR)
    */
-  const onlyCommitters = committers.filter((committer: CommittersDetails) =>
+  const onlyCommitters = committers.filter(committer =>
     filteredListOfPRComments.some(
       commentedCommitter => committer.id == commentedCommitter.id
     )

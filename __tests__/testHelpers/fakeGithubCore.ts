@@ -65,6 +65,7 @@ export interface FakeRepoHandle {
 export interface RouteResult {
   status: number
   body: string // serialized JSON (or empty string)
+  headers?: Record<string, string>
 }
 
 export interface FakeGitHubCore {
@@ -110,6 +111,32 @@ export function createFakeGitHubCore(): FakeGitHubCore {
   }
   function notFound(msg = 'not found'): RouteResult {
     return json(404, { message: msg })
+  }
+
+  /**
+   * Paginate a full list per the caller's page/per_page query parameters and
+   * add a RFC 5988 Link header with rel="next" when more pages remain.
+   * Mirrors GitHub's REST pagination contract that octokit.paginate follows.
+   */
+  function paginate<T>(
+    all: T[],
+    query: URLSearchParams,
+    pathForLink: string
+  ): RouteResult {
+    const perPage = Math.max(
+      1,
+      Math.min(100, parseInt(query.get('per_page') || '30', 10))
+    )
+    const page = Math.max(1, parseInt(query.get('page') || '1', 10))
+    const start = (page - 1) * perPage
+    const slice = all.slice(start, start + perPage)
+    const hasNext = start + perPage < all.length
+    const headers: Record<string, string> = {}
+    if (hasNext) {
+      const nextUrl = `https://api.github.com${pathForLink}?page=${page + 1}&per_page=${perPage}`
+      headers['link'] = `<${nextUrl}>; rel="next"`
+    }
+    return { status: 200, body: JSON.stringify(slice), headers }
   }
 
   type Handler = (
@@ -177,11 +204,12 @@ export function createFakeGitHubCore(): FakeGitHubCore {
       path
     })
   })
-  addRoute(getRoutes, '/repos/:owner/:repo/issues/:num/comments', m => {
+  addRoute(getRoutes, '/repos/:owner/:repo/issues/:num/comments', (m, _body, query) => {
     const owner = decodeURIComponent(m[1]!)
     const name = decodeURIComponent(m[2]!)
     const num = parseInt(m[3]!, 10)
-    return json(200, getRepo(owner, name).comments.get(num) || [])
+    const all = getRepo(owner, name).comments.get(num) || []
+    return paginate(all, query, `/repos/${owner}/${name}/issues/${num}/comments`)
   })
   addRoute(getRoutes, '/repos/:owner/:repo/pulls/:num', m => {
     const owner = decodeURIComponent(m[1]!)

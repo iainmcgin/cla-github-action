@@ -4,7 +4,7 @@ import signatureWithPRComment from './signatureComment'
 import { commentContent } from './pullRequestCommentContent'
 import {
   CommitterMap,
-  CommittersDetails,
+  Committer,
   ReactedCommitterMap
 } from '../interfaces'
 import { getUseDcoFlag } from '../shared/getInputs'
@@ -12,7 +12,7 @@ import { errorMessage } from '../shared/errors'
 
 export default async function prCommentSetup(
   committerMap: CommitterMap,
-  committers: CommittersDetails[]
+  committers: Committer[]
 ) {
   const signed = committerMap?.notSigned && committerMap?.notSigned.length === 0
 
@@ -124,10 +124,10 @@ function prepareCommiterMap(
 
 function prepareAllSignedCommitters(
   committerMap: CommitterMap,
-  signedInPrCommitters: CommittersDetails[],
-  committers: CommittersDetails[]
+  signedInPrCommitters: Committer[],
+  committers: Committer[]
 ): boolean {
-  let allSignedCommitters = [] as CommittersDetails[]
+  let allSignedCommitters = [] as Committer[]
   /*
    * 1) already signed committers in the file 2) signed committers in the PR comment
    */

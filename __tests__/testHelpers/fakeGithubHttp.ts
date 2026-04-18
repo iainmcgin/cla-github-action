@@ -30,7 +30,7 @@ export async function startFakeGitHubHttp(): Promise<FakeGitHubHttp> {
     req.on('data', c => chunks.push(c))
     req.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf-8')
-      const { status, body: out } = core.route(
+      const { status, body: out, headers } = core.route(
         req.method || 'GET',
         req.url || '/',
         body
@@ -42,6 +42,9 @@ export async function startFakeGitHubHttp(): Promise<FakeGitHubHttp> {
       })
       res.statusCode = status
       res.setHeader('content-type', 'application/json')
+      if (headers) {
+        for (const [k, v] of Object.entries(headers)) res.setHeader(k, v)
+      }
       res.end(out)
     })
   })

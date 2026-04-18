@@ -29,11 +29,13 @@ export function installFakeGitHub(): FakeGitHub {
   function makeReply(method: string) {
     return (opts: any) => {
       const rawBody = typeof opts.body === 'string' ? opts.body : ''
-      const { status, body } = core.route(method, opts.path, rawBody)
+      const { status, body, headers } = core.route(method, opts.path, rawBody)
       return {
         statusCode: status,
         data: body,
-        responseOptions: { headers: { 'content-type': 'application/json' } }
+        responseOptions: {
+          headers: { 'content-type': 'application/json', ...(headers || {}) }
+        }
       }
     }
   }

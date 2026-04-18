@@ -6,7 +6,7 @@ import {
   ClaFileContent,
   ClafileContentAndSha,
   CommitterMap,
-  CommittersDetails,
+  Committer,
   ReactedCommitterMap
 } from './interfaces'
 import {
@@ -68,7 +68,7 @@ export async function setupClaCheck() {
 }
 
 async function getCLAFileContentandSHA(
-  committers: CommittersDetails[],
+  committers: Committer[],
   committerMap: CommitterMap
 ): Promise<void | ClafileContentAndSha> {
   let result, claFileContentString, claFileContent, sha
@@ -90,7 +90,7 @@ async function getCLAFileContentandSHA(
 }
 
 async function createClaFileAndPRComment(
-  committers: CommittersDetails[],
+  committers: Committer[],
   committerMap: CommitterMap
 ): Promise<void> {
   committerMap.notSigned = committers
@@ -118,7 +118,7 @@ async function createClaFileAndPRComment(
 }
 
 function prepareCommiterMap(
-  committers: CommittersDetails[],
+  committers: Committer[],
   claFileContent: ClaFileContent
 ): CommitterMap {
   let committerMap = getInitialCommittersMap()

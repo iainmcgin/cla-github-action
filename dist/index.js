@@ -949,24 +949,26 @@ const github_1 = __nccwpck_require__(3228);
 const getInputs_1 = __nccwpck_require__(7189);
 function signatureWithPRComment(committerMap, committers) {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        let repoId = github_1.context.payload.repository.id;
+        var _a, _b;
+        const repoId = (_a = github_1.context.payload.repository) === null || _a === void 0 ? void 0 : _a.id;
         const allComments = yield octokit_1.octokit.paginate(octokit_1.octokit.rest.issues.listComments, {
             owner: github_1.context.repo.owner,
             repo: github_1.context.repo.repo,
             issue_number: github_1.context.issue.number,
             per_page: 100
         });
-        let listOfPRComments = [];
-        let filteredListOfPRComments = [];
+        const listOfPRComments = [];
+        const filteredListOfPRComments = [];
         for (const prComment of allComments) {
+            if (!prComment.user)
+                continue;
             listOfPRComments.push({
                 name: prComment.user.login,
                 id: prComment.user.id,
                 comment_id: prComment.id,
-                body: (_a = prComment.body) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase(),
+                body: (_b = prComment.body) === null || _b === void 0 ? void 0 : _b.trim().toLowerCase(),
                 created_at: prComment.created_at,
-                repoId: repoId,
+                repoId,
                 pullRequestNo: github_1.context.issue.number
             });
         }
@@ -983,7 +985,7 @@ function signatureWithPRComment(committerMap, committers) {
         /*
          * checking if the commented users are only the contributors who has committed in the same PR (This is needed for the PR Comment and changing the status to success when all the contributors has reacted to the PR)
          */
-        const onlyCommitters = committers.filter((committer) => filteredListOfPRComments.some(commentedCommitter => committer.id == commentedCommitter.id));
+        const onlyCommitters = committers.filter(committer => filteredListOfPRComments.some(commentedCommitter => committer.id == commentedCommitter.id));
         const commentedCommitterMap = {
             newSigned,
             onlyCommitters,

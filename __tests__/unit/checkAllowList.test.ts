@@ -1,8 +1,8 @@
 import { resetEnv, setInput } from '../testHelpers/env'
 import { checkAllowList } from '../../src/checkAllowList'
-import { CommittersDetails } from '../../src/interfaces'
+import { Committer } from '../../src/interfaces'
 
-function committer(name: string): CommittersDetails {
+function committer(name: string): Committer {
   return { name, id: 0, pullRequestNo: 1 }
 }
 
@@ -71,8 +71,8 @@ describe('checkAllowList', () => {
     setInput('allowlist', '')
     const result = checkAllowList([
       committer('alice'),
-      null as unknown as CommittersDetails,
-      undefined as unknown as CommittersDetails
+      null as unknown as Committer,
+      undefined as unknown as Committer
     ])
     expect(result.map(c => c.name)).toEqual(['alice'])
   })

@@ -1,4 +1,4 @@
-import { CommittersDetails } from './interfaces'
+import { Committer } from './interfaces'
 
 import * as input from './shared/getInputs'
 
@@ -19,8 +19,8 @@ function isUserAllowListed(committer: string): boolean {
 }
 
 export function checkAllowList(
-  committers: CommittersDetails[]
-): CommittersDetails[] {
+  committers: Committer[]
+): Committer[] {
   return committers.filter(
     committer => committer && !isUserAllowListed(committer.name)
   )

@@ -1,6 +1,6 @@
 import { octokit } from './octokit'
 import { context } from '@actions/github'
-import { CommittersDetails } from './interfaces'
+import { Committer } from './interfaces'
 import { errorMessage } from './shared/errors'
 
 interface GraphQLUser {
@@ -64,10 +64,10 @@ query($owner:String! $name:String! $number:Int! $cursor:String){
     }
 }`
 
-export default async function getCommitters(): Promise<CommittersDetails[]> {
+export default async function getCommitters(): Promise<Committer[]> {
   try {
     const seenNames = new Set<string>()
-    const committers: CommittersDetails[] = []
+    const committers: Committer[] = []
     let cursor: string | null = null
     let hasNextPage = true
 
@@ -82,7 +82,7 @@ export default async function getCommitters(): Promise<CommittersDetails[]> {
       const page = response.repository.pullRequest.commits
       for (const edge of page.edges) {
         const actor = extractUserFromCommit(edge.node.commit)
-        const user: CommittersDetails = {
+        const user: Committer = {
           name: actor.login || actor.name || '',
           id: actor.databaseId || 0,
           pullRequestNo: context.issue.number
