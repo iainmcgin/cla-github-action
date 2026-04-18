@@ -14,6 +14,7 @@ export interface FakeGitHub {
   repo(owner: string, name: string): FakeRepoHandle
   recordedLocks: FakeGitHubCore['recordedLocks']
   recordedRerunRequests: FakeGitHubCore['recordedRerunRequests']
+  injectFailure: FakeGitHubCore['injectFailure']
   close(): Promise<void>
 }
 
@@ -48,6 +49,7 @@ export function installFakeGitHub(): FakeGitHub {
     repo: core.repo,
     recordedLocks: core.recordedLocks,
     recordedRerunRequests: core.recordedRerunRequests,
+    injectFailure: core.injectFailure,
     async close() {
       await agent.close()
       setGlobalDispatcher(original)

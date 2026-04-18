@@ -17,7 +17,7 @@ export interface FakeGitHubHttp {
   repo(owner: string, name: string): FakeRepoHandle
   recordedLocks: FakeGitHubCore['recordedLocks']
   recordedRerunRequests: FakeGitHubCore['recordedRerunRequests']
-  requestLog: Array<{ method: string; path: string; status: number }>
+  requestLog: Array<{ method: string; path: string; status: number; body: string }>
   close(): Promise<void>
 }
 
@@ -38,7 +38,8 @@ export async function startFakeGitHubHttp(): Promise<FakeGitHubHttp> {
       requestLog.push({
         method: req.method || 'GET',
         path: req.url || '/',
-        status
+        status,
+        body
       })
       res.statusCode = status
       res.setHeader('content-type', 'application/json')

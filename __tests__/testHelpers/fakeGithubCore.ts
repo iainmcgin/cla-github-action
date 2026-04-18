@@ -65,13 +65,28 @@ export interface FakeRepoHandle {
 export interface RouteResult {
   status: number
   body: string // serialized JSON (or empty string)
+  headers?: Record<string, string> | undefined
+}
+
+export interface FaultInjection {
+  method: string
+  pathPattern: RegExp
+  status: number
+  body?: string
   headers?: Record<string, string>
+  times: number
 }
 
 export interface FakeGitHubCore {
   repo(owner: string, name: string): FakeRepoHandle
   recordedLocks: Array<{ owner: string; repo: string; issue: number }>
   recordedRerunRequests: Array<{ owner: string; repo: string; runId: number }>
+  /**
+   * Make the next `spec.times` matching requests return the given status,
+   * then fall through to normal routing. Useful for simulating transient
+   * 5xx responses, 403 rate-limit, 502 gateway timeouts, etc.
+   */
+  injectFailure(spec: FaultInjection): void
   route(method: string, rawPath: string, body: string): RouteResult
 }
 
@@ -84,6 +99,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
   const recordedLocks: FakeGitHubCore['recordedLocks'] = []
   const recordedRerunRequests: FakeGitHubCore['recordedRerunRequests'] = []
   let nextRepoId = 1000
+  const faults: FaultInjection[] = []
 
   function getRepo(owner: string, name: string): RepoState {
     const key = `${owner}/${name}`
@@ -407,9 +423,34 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   }
 
+  function consumeFault(method: string, pathname: string): RouteResult | undefined {
+    // Match against both the raw and percent-decoded pathname so test regexes
+    // can be written naturally ('/signatures/cla.json') and still match the
+    // encoded URLs octokit emits ('/signatures%2Fcla.json').
+    const decoded = decodeURIComponent(pathname)
+    for (let i = 0; i < faults.length; i++) {
+      const f = faults[i]!
+      if (
+        f.method.toUpperCase() !== method ||
+        (!f.pathPattern.test(pathname) && !f.pathPattern.test(decoded))
+      )
+        continue
+      f.times -= 1
+      if (f.times <= 0) faults.splice(i, 1)
+      return {
+        status: f.status,
+        body: f.body ?? JSON.stringify({ message: `fault-injected ${f.status}` }),
+        headers: f.headers
+      }
+    }
+    return undefined
+  }
+
   function route(method: string, rawPath: string, body: string): RouteResult {
     const { pathname } = parsePath(rawPath)
     const m = method.toUpperCase()
+    const fault = consumeFault(m, pathname)
+    if (fault) return fault
     if (m === 'POST' && pathname === '/graphql') return handleGraphQL(body)
     switch (m) {
       case 'GET':
@@ -481,10 +522,15 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     }
   }
 
+  function injectFailure(spec: FaultInjection): void {
+    faults.push({ ...spec })
+  }
+
   return {
     repo: repoHandle,
     recordedLocks,
     recordedRerunRequests,
+    injectFailure,
     route
   }
 }

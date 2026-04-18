@@ -90,23 +90,51 @@ function scenarioEnv(
   }
 }
 
+import {createHash} from 'crypto'
+
 interface NormalizedRequest {
   method: string
   path: string
   status: number
+  bodyHash: string  // stable hash of the canonicalized request body
+  bodyShape: string // tag, e.g. 'empty' | 'json' | 'text', for readable diffs
+}
+
+/**
+ * Canonicalize a request body so that shallow-nondeterministic differences
+ * (key ordering from JSON encoders, trailing whitespace) don't dominate the
+ * diff, but any semantic change — a missing field, a new field, a different
+ * commit message — still produces a distinct hash.
+ */
+function canonicalBody(raw: string): {hash: string; shape: string} {
+  if (!raw) return {hash: 'empty', shape: 'empty'}
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      hash: createHash('sha1').update(raw).digest('hex').slice(0, 12),
+      shape: 'text'
+    }
+  }
+  const canon = JSON.stringify(parsed, Object.keys(parsed as object).sort())
+  return {
+    hash: createHash('sha1').update(canon).digest('hex').slice(0, 12),
+    shape: 'json'
+  }
 }
 
 function normalizeLog(log: FakeGitHubHttp['requestLog']): NormalizedRequest[] {
-  return log.map(e => ({
-    method: e.method,
-    // Collapse non-deterministic path segments. The patch URL
-    //   /repos/:o/:r/issues/comments/:id
-    // carries a server-assigned comment id that will match across runs because
-    // the fake state starts clean per scenario, so we only need to strip query
-    // strings and percent-encoding quirks.
-    path: decodeURIComponent(e.path.split('?')[0] || ''),
-    status: e.status
-  }))
+  return log.map(e => {
+    const {hash, shape} = canonicalBody(e.body)
+    return {
+      method: e.method,
+      path: decodeURIComponent(e.path.split('?')[0] || ''),
+      status: e.status,
+      bodyHash: hash,
+      bodyShape: shape
+    }
+  })
 }
 
 const scenarios: Array<{
@@ -217,7 +245,25 @@ describe('pre- vs post-refactor: HTTP-level behaviour is unchanged', () => {
       // Sort by path so request ordering (which can differ legitimately across
       // HTTP library versions) does not dominate the diff. We still verify the
       // set of calls.
-      const key = (r: NormalizedRequest) => `${r.method} ${r.path}`
+      // Some body hashes are expected to differ because of intentional
+      // changes landed in this fork: e.g. graphql.ts now paginates (so the
+      // POST /graphql body includes a `cursor` variable it didn't before),
+      // pullRequestCommentContent.ts fixes a broken markdown link (changing
+      // the PATCH /issues/comments/:id body), and persistence.updateFile
+      // now builds a fresh object instead of mutating the caller's
+      // claFileContent (which may reorder keys in the PUT body). For those
+      // endpoints, compare only (method, path, status) and rely on the
+      // focused unit tests to pin down body shape.
+      const bodySensitive = (r: NormalizedRequest): boolean => {
+        if (r.method === 'POST' && r.path === '/graphql') return false
+        if (r.method === 'PATCH' && r.path.startsWith('/repos/acme/widgets/issues/comments/')) return false
+        if (r.method === 'PUT' && r.path === '/repos/acme/widgets/contents/signatures/cla.json') return false
+        return true
+      }
+      const key = (r: NormalizedRequest) =>
+        bodySensitive(r)
+          ? `${r.method} ${r.path} body=${r.bodyShape}:${r.bodyHash}`
+          : `${r.method} ${r.path} body=<allowed-to-differ>`
       const preSet = pre.map(key).sort()
       const postSet = post.map(key).sort()
 
