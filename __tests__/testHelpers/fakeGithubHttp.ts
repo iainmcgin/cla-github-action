@@ -17,7 +17,12 @@ export interface FakeGitHubHttp {
   repo(owner: string, name: string): FakeRepoHandle
   recordedLocks: FakeGitHubCore['recordedLocks']
   recordedRerunRequests: FakeGitHubCore['recordedRerunRequests']
-  requestLog: Array<{ method: string; path: string; status: number; body: string }>
+  requestLog: Array<{
+    method: string
+    path: string
+    status: number
+    body: string
+  }>
   close(): Promise<void>
 }
 
@@ -30,11 +35,11 @@ export async function startFakeGitHubHttp(): Promise<FakeGitHubHttp> {
     req.on('data', c => chunks.push(c))
     req.on('end', () => {
       const body = Buffer.concat(chunks).toString('utf-8')
-      const { status, body: out, headers } = core.route(
-        req.method || 'GET',
-        req.url || '/',
-        body
-      )
+      const {
+        status,
+        body: out,
+        headers
+      } = core.route(req.method || 'GET', req.url || '/', body)
       requestLog.push({
         method: req.method || 'GET',
         path: req.url || '/',

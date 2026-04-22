@@ -2,11 +2,7 @@ import { octokit } from '../octokit'
 import { context } from '@actions/github'
 import signatureWithPRComment from './signatureComment'
 import { commentContent } from './pullRequestCommentContent'
-import {
-  CommitterMap,
-  Committer,
-  ReactedCommitterMap
-} from '../interfaces'
+import { CommitterMap, Committer, ReactedCommitterMap } from '../interfaces'
 import { getUseDcoFlag } from '../shared/getInputs'
 import { errorMessage } from '../shared/errors'
 

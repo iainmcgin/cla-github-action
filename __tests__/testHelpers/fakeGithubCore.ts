@@ -220,13 +220,21 @@ export function createFakeGitHubCore(): FakeGitHubCore {
       path
     })
   })
-  addRoute(getRoutes, '/repos/:owner/:repo/issues/:num/comments', (m, _body, query) => {
-    const owner = decodeURIComponent(m[1]!)
-    const name = decodeURIComponent(m[2]!)
-    const num = parseInt(m[3]!, 10)
-    const all = getRepo(owner, name).comments.get(num) || []
-    return paginate(all, query, `/repos/${owner}/${name}/issues/${num}/comments`)
-  })
+  addRoute(
+    getRoutes,
+    '/repos/:owner/:repo/issues/:num/comments',
+    (m, _body, query) => {
+      const owner = decodeURIComponent(m[1]!)
+      const name = decodeURIComponent(m[2]!)
+      const num = parseInt(m[3]!, 10)
+      const all = getRepo(owner, name).comments.get(num) || []
+      return paginate(
+        all,
+        query,
+        `/repos/${owner}/${name}/issues/${num}/comments`
+      )
+    }
+  )
   addRoute(getRoutes, '/repos/:owner/:repo/pulls/:num', m => {
     const owner = decodeURIComponent(m[1]!)
     const name = decodeURIComponent(m[2]!)
@@ -423,7 +431,10 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     })
   }
 
-  function consumeFault(method: string, pathname: string): RouteResult | undefined {
+  function consumeFault(
+    method: string,
+    pathname: string
+  ): RouteResult | undefined {
     // Match against both the raw and percent-decoded pathname so test regexes
     // can be written naturally ('/signatures/cla.json') and still match the
     // encoded URLs octokit emits ('/signatures%2Fcla.json').
@@ -439,7 +450,8 @@ export function createFakeGitHubCore(): FakeGitHubCore {
       if (f.times <= 0) faults.splice(i, 1)
       return {
         status: f.status,
-        body: f.body ?? JSON.stringify({ message: `fault-injected ${f.status}` }),
+        body:
+          f.body ?? JSON.stringify({ message: `fault-injected ${f.status}` }),
         headers: f.headers
       }
     }

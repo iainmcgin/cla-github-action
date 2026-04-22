@@ -90,13 +90,13 @@ function scenarioEnv(
   }
 }
 
-import {createHash} from 'crypto'
+import { createHash } from 'crypto'
 
 interface NormalizedRequest {
   method: string
   path: string
   status: number
-  bodyHash: string  // stable hash of the canonicalized request body
+  bodyHash: string // stable hash of the canonicalized request body
   bodyShape: string // tag, e.g. 'empty' | 'json' | 'text', for readable diffs
 }
 
@@ -106,8 +106,8 @@ interface NormalizedRequest {
  * diff, but any semantic change — a missing field, a new field, a different
  * commit message — still produces a distinct hash.
  */
-function canonicalBody(raw: string): {hash: string; shape: string} {
-  if (!raw) return {hash: 'empty', shape: 'empty'}
+function canonicalBody(raw: string): { hash: string; shape: string } {
+  if (!raw) return { hash: 'empty', shape: 'empty' }
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
@@ -126,7 +126,7 @@ function canonicalBody(raw: string): {hash: string; shape: string} {
 
 function normalizeLog(log: FakeGitHubHttp['requestLog']): NormalizedRequest[] {
   return log.map(e => {
-    const {hash, shape} = canonicalBody(e.body)
+    const { hash, shape } = canonicalBody(e.body)
     return {
       method: e.method,
       path: decodeURIComponent(e.path.split('?')[0] || ''),
@@ -256,8 +256,16 @@ describe('pre- vs post-refactor: HTTP-level behaviour is unchanged', () => {
       // focused unit tests to pin down body shape.
       const bodySensitive = (r: NormalizedRequest): boolean => {
         if (r.method === 'POST' && r.path === '/graphql') return false
-        if (r.method === 'PATCH' && r.path.startsWith('/repos/acme/widgets/issues/comments/')) return false
-        if (r.method === 'PUT' && r.path === '/repos/acme/widgets/contents/signatures/cla.json') return false
+        if (
+          r.method === 'PATCH' &&
+          r.path.startsWith('/repos/acme/widgets/issues/comments/')
+        )
+          return false
+        if (
+          r.method === 'PUT' &&
+          r.path === '/repos/acme/widgets/contents/signatures/cla.json'
+        )
+          return false
         return true
       }
       const key = (r: NormalizedRequest) =>

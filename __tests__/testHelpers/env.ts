@@ -12,17 +12,6 @@ export function setInput(name: string, value: string): void {
   trackedKeys.add(key)
 }
 
-export function setGithubEnv(vars: Record<string, string | undefined>): void {
-  for (const [k, v] of Object.entries(vars)) {
-    if (v === undefined) {
-      delete process.env[k]
-    } else {
-      process.env[k] = v
-    }
-    trackedKeys.add(k)
-  }
-}
-
 export function resetEnv(): void {
   for (const key of trackedKeys) {
     delete process.env[key]

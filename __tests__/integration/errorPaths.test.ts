@@ -84,7 +84,9 @@ describe('error paths', () => {
 
     // The action reports the failure through core.setFailed. It does not
     // silently retry (v6 @actions/github does not ship plugin-retry).
-    expect(watch.failures.join('\n')).toMatch(/Could not retrieve repository contents|Could not update the JSON file/)
+    expect(watch.failures.join('\n')).toMatch(
+      /Could not retrieve repository contents|Could not update the JSON file/
+    )
     watch.restore()
   })
 
@@ -145,9 +147,9 @@ describe('error paths', () => {
       body: 'i have read the cla document and i hereby sign the cla',
       user: { login: 'alice', id: 1001 }
     })
-    fake.repo('acme', 'widgets').addWorkflow('cla-check', [
-      { id: 777, conclusion: 'failure' }
-    ])
+    fake
+      .repo('acme', 'widgets')
+      .addWorkflow('cla-check', [{ id: 777, conclusion: 'failure' }])
 
     // Rerun-workflow-run fails at the 'listWorkflowRuns' step.
     fake.injectFailure({
@@ -178,7 +180,9 @@ describe('error paths', () => {
 
     // The signature should still have been recorded even though the rerun
     // request failed.
-    const sigFile = fake.repo('acme', 'widgets').getFile('signatures/v1/cla.json') as {
+    const sigFile = fake
+      .repo('acme', 'widgets')
+      .getFile('signatures/v1/cla.json') as {
       signedContributors: Array<{ name: string }>
     }
     expect(sigFile.signedContributors.map(c => c.name)).toContain('alice')

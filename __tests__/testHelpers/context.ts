@@ -1,6 +1,6 @@
 import * as github from '@actions/github'
 
-export interface TestContext {
+interface TestContext {
   owner: string
   repo: string
   issueNumber: number

@@ -18,9 +18,7 @@ function isUserAllowListed(committer: string): boolean {
   })
 }
 
-export function checkAllowList(
-  committers: Committer[]
-): Committer[] {
+export function checkAllowList(committers: Committer[]): Committer[] {
   return committers.filter(
     committer => committer && !isUserAllowListed(committer.name)
   )

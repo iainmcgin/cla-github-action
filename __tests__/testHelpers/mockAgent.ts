@@ -34,19 +34,6 @@ export function installMockAgent(): MockAgentHarness {
   }
 }
 
-/** Jest-style beforeEach/afterEach setup. Returns a getter. */
-export function useMockAgent(): () => MockAgentHarness {
-  let harness: MockAgentHarness | undefined
-  beforeEach(() => {
-    harness = installMockAgent()
-  })
-  afterEach(async () => {
-    await harness!.close()
-    harness = undefined
-  })
-  return () => harness!
-}
-
 /**
  * Install an interceptor that captures the request body as JSON and returns
  * the given reply. The returned object's `body` is populated after the request

@@ -62,7 +62,9 @@ describe('pagination', () => {
     )
     // alice's signing comment lives on page 2. If pagination were broken,
     // newSigned would be empty.
-    expect(result.newSigned.map((c: { name: string }) => c.name)).toEqual(['alice'])
+    expect(result.newSigned.map((c: { name: string }) => c.name)).toEqual([
+      'alice'
+    ])
   })
 
   it('fake emits rel="next" only when there are more pages', async () => {

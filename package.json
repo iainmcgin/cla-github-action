@@ -2,13 +2,22 @@
   "name": "github-action",
   "version": "0.0.1",
   "description": "GitHub Action for storing CLA signatures",
+  "type": "commonjs",
   "main": "lib/main.js",
+  "private": true,
+  "files": [
+    "dist/",
+    "action.yml"
+  ],
   "scripts": {
     "test": "jest",
     "build": "tsc && ncc build",
     "buildAndAdd": "npm run build && git add .",
     "format": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"__tests__/**/*.ts\"",
+    "lint:knip": "knip",
+    "lint:publint": "publint",
+    "lint": "npm run format:check && npm run lint:knip && npm run lint:publint",
     "prepare": "husky"
   },
   "repository": {
@@ -30,10 +39,12 @@
     "@vercel/ncc": "^0.38.0",
     "husky": "^9.1.7",
     "jest": "^29.7.0",
-    "nock": "^14.0.12",
+    "knip": "^6.6.1",
     "prettier": "^3.8.3",
+    "publint": "^0.3.18",
     "ts-jest": "^29.0.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "undici": "^5.29.0"
   },
   "author": "ibakshay",
   "license": "Apache-2.0",
