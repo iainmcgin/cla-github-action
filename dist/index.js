@@ -31051,7 +31051,7 @@ function renderOpenerMismatchBlock(mismatch) {
 > - Opener: @${mismatch.opener}
 > - Commit authors: ${authorList}
 >
-> This check is blocked to guard against commits being submitted under a trusted identity the submitter does not control. If this PR is a legitimate cherry-pick, release-engineering submission, or mailing-list-style patch delivery, the repository maintainer can opt out of this check by setting \`require-opener-as-author: 'false'\` on the \`contributor-assistant/github-action\` step in the repository's workflow.
+> This check is blocked to guard against commits being submitted under a trusted identity the submitter does not control. If this PR is a legitimate cherry-pick, release-engineering submission, or mailing-list-style patch delivery, the repository maintainer can opt out of this check by setting \`require-opener-as-author: 'false'\` on the CLA-assistant step in the repository's workflow.
 
 `;
     }

@@ -22,8 +22,6 @@ inputs:
     description: "Fully qualified web link to the document - example: https://github.com/cla-assistant/github-action/blob/master/SAPCLA.md"
   signed-commit-message:
     description: "Commit message when a new contributor signs the CLA in a PR"
-  signed-empty-commit-message:
-    description: "Commit message when a new contributor signs the CLA (empty)"
   create-file-commit-message:
     description: "Commit message when a new file is created"
   custom-notsigned-prcomment:
@@ -51,6 +49,14 @@ inputs:
       others (cherry-picks, release-engineering patch submission, mailing-list
       style contribution workflows).
     default: "true"
+outputs:
+  opener_not_in_commits:
+    description: >
+      Set to 'true' when the Pull Request opener is not recorded as an author
+      or co-author of any commit in the PR. Emitted regardless of whether
+      'require-opener-as-author' caused the check to fail, so repositories
+      can gate additional workflows (e.g. branch protection rules) on this
+      output independently of the CLA-check pass/fail.
 runs:
   using: "node24"
   main: 'dist/index.js'
