@@ -10,6 +10,22 @@ the logical unit of work. Each entry links to the commit that introduced it.
 ## Unreleased
 
 ### Added
+- **Impersonation guard: PR opener must be an author or co-author of at
+  least one commit (new `require-opener-as-author` input, defaults to
+  `true`).** A PR whose commits are all attributed to a different identity
+  than the submitter is a potential git-author impersonation vector (git
+  author fields are unauthenticated). When the opener is not in the
+  authorship trail, the action now:
+  - Emits `core.setOutput('opener_not_in_commits', true)` so branch-
+    protection rules can gate on it.
+  - Prepends a `> [!CAUTION]` block to the bot comment naming the opener
+    and the actual commit authors.
+  - Fails the check (`setFailed`) when `require-opener-as-author` is
+    `true` (the default).
+  - Opt out with `require-opener-as-author: 'false'` for workflows
+    involving cherry-picks, release-engineering patch submission, or
+    mailing-list-style contribution. In that mode the block is a
+    `> [!NOTE]` heads-up instead of a hard failure.
 - **PR opener and `Co-authored-by:` trailers are now part of the committer
   set.** Previously the action enumerated only `commit.author` (with
   `commit.committer` as fallback) from each PR commit. If Alice opened a PR

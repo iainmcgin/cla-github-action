@@ -27,7 +27,12 @@ export function commentContent(
   committerMap: CommitterMap
 ): string {
   const mode = input.getUseDcoFlag() ? DCO : CLA
-  return signed ? renderAllSigned(mode) : renderPending(mode, committerMap)
+  const body = signed
+    ? renderAllSigned(mode)
+    : renderPending(mode, committerMap)
+  return committerMap.openerMismatch
+    ? renderOpenerMismatchBlock(committerMap.openerMismatch) + body
+    : body
 }
 
 function renderAllSigned(mode: ModeText): string {
@@ -84,6 +89,41 @@ function renderPending(mode: ModeText, committerMap: CommitterMap): string {
 
 function botSignature(mode: ModeText): string {
   return `<sub>Posted by the **${mode.botName}**.</sub>`
+}
+
+/**
+ * Renders the "PR opener is not an author or co-author of any commit" block.
+ * Prepended to the rest of the comment so maintainers see it first. The
+ * warning is either a hard block (require-opener-as-author=true; the default)
+ * or a heads-up (require-opener-as-author=false, for repos with legitimate
+ * cherry-pick / patch-submission workflows).
+ */
+function renderOpenerMismatchBlock(mismatch: {
+  opener: string
+  commitAuthors: string[]
+  hardFail: boolean
+}): string {
+  const authorList =
+    mismatch.commitAuthors.length > 0
+      ? mismatch.commitAuthors.map(a => `@${a}`).join(', ')
+      : '*(no commit authors could be identified)*'
+
+  if (mismatch.hardFail) {
+    return `> [!CAUTION]
+> **Pull Request opener is not an author or co-author of any commit in this PR.**
+>
+> - Opener: @${mismatch.opener}
+> - Commit authors: ${authorList}
+>
+> This check is blocked to guard against commits being submitted under a trusted identity the submitter does not control. If this PR is a legitimate cherry-pick, release-engineering submission, or mailing-list-style patch delivery, the repository maintainer can opt out of this check by setting \`require-opener-as-author: 'false'\` on the \`contributor-assistant/github-action\` step in the repository's workflow.
+
+`
+  }
+
+  return `> [!NOTE]
+> Pull Request opener @${mismatch.opener} is not an author or co-author of any commit in this PR (commit authors: ${authorList}). The CLA check will still proceed and requires every listed author plus @${mismatch.opener} to have signed.
+
+`
 }
 
 /**

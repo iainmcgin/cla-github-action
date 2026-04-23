@@ -464,4 +464,92 @@ describe('CLA action end-to-end scenarios', () => {
     expect(body).toContain('carol@example.com')
     watch.restore()
   })
+
+  it('PR opener absent from all commit authors: hard-fails by default with an impersonation-guard CAUTION', async () => {
+    const watch = watchCore()
+    // Alice opens the PR; all commits are attributed to bob.
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 16,
+      head: { sha: 'headsha', ref: 'feature/cherry' },
+      commits: [{ author: { login: 'bob', id: 2002 } }]
+    })
+    // Both alice and bob have already signed — so the only failure path open
+    // is the opener-not-in-authors check itself.
+    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
+      signedContributors: [
+        { name: 'alice', id: 1001 },
+        { name: 'bob', id: 2002 }
+      ]
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 16,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        action: 'opened',
+        pull_request: {
+          number: 16,
+          state: 'open',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
+      }
+    })
+
+    await runAction()
+
+    expect(watch.failures.join('\n')).toMatch(
+      /Pull Request opener @alice is not recorded/
+    )
+    const body = fake.repo('acme', 'widgets').listComments(16)[0]!.body
+    expect(body).toContain('[!CAUTION]')
+    expect(body).toContain('@alice')
+    expect(body).toContain('@bob')
+    watch.restore()
+  })
+
+  it('PR opener absent from all commit authors with require-opener-as-author=false: no hard fail, NOTE block only', async () => {
+    const watch = watchCore()
+    setInput('require-opener-as-author', 'false')
+
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 17,
+      head: { sha: 'headsha', ref: 'feature/cherry' },
+      commits: [{ author: { login: 'bob', id: 2002 } }]
+    })
+    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
+      signedContributors: [
+        { name: 'alice', id: 1001 },
+        { name: 'bob', id: 2002 }
+      ]
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 17,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        action: 'opened',
+        pull_request: {
+          number: 17,
+          state: 'open',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
+      }
+    })
+
+    await runAction()
+
+    expect(watch.failures).toEqual([])
+    const body = fake.repo('acme', 'widgets').listComments(17)[0]!.body
+    expect(body).toContain('[!NOTE]')
+    expect(body).not.toContain('[!CAUTION]')
+    watch.restore()
+  })
 })

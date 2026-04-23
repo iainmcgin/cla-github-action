@@ -118,6 +118,58 @@ describe('commentContent (CLA mode)', () => {
     })
   })
 
+  describe('opener-mismatch block', () => {
+    it('renders a CAUTION block naming opener + commit authors when hardFail is true', () => {
+      const body = commentContent(
+        true,
+        committerMap({
+          openerMismatch: {
+            opener: 'alice',
+            commitAuthors: ['bob', 'carol'],
+            hardFail: true
+          }
+        })
+      )
+      expect(body).toContain('[!CAUTION]')
+      expect(body).toContain('@alice')
+      expect(body).toContain('@bob')
+      expect(body).toContain('@carol')
+      expect(body).toContain('require-opener-as-author')
+    })
+
+    it('renders a NOTE block (not CAUTION) when hardFail is false', () => {
+      const body = commentContent(
+        true,
+        committerMap({
+          openerMismatch: {
+            opener: 'alice',
+            commitAuthors: ['bob'],
+            hardFail: false
+          }
+        })
+      )
+      expect(body).toContain('[!NOTE]')
+      expect(body).not.toContain('[!CAUTION]')
+      expect(body).toContain('@alice')
+      expect(body).toContain('@bob')
+    })
+
+    it('handles an empty commit-author list gracefully', () => {
+      const body = commentContent(
+        true,
+        committerMap({
+          openerMismatch: {
+            opener: 'alice',
+            commitAuthors: [],
+            hardFail: true
+          }
+        })
+      )
+      expect(body).toContain('[!CAUTION]')
+      expect(body).toContain('no commit authors could be identified')
+    })
+  })
+
   it('adds the "recheck" hint when suggest-recheck is true', () => {
     setInput('suggest-recheck', 'true')
     const body = commentContent(false, committerMap())

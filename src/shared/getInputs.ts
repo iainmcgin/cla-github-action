@@ -43,11 +43,26 @@ export const lockPullRequestAfterMerge = (): boolean =>
 export const suggestRecheck = (): boolean => getBooleanInput('suggest-recheck')
 
 /**
+ * Whether the PR opener must be recorded as an author or co-author of at
+ * least one commit in the PR. When true (the default), an opener who is not
+ * in the authorship trail causes the check to fail — a guard against
+ * impersonation of an attacker-submitted patch attributed to a trusted
+ * identity. Opt out by setting 'false' if your workflow involves submitters
+ * who legitimately push commits authored by others (cherry-picks, release
+ * engineers applying accepted patches, mailing-list-style patch submission).
+ */
+export const requireOpenerAsAuthor = (): boolean =>
+  getBooleanInput('require-opener-as-author', true)
+
+/**
  * Parses the action input as a boolean, tolerating unset / empty. Actions
  * accept only strings; 'true' / 'false' (case-insensitive) are the supported
- * values. Anything else — including an unset input — returns false.
+ * values. Anything else falls back to `fallback` (default false), so an
+ * unset input preserves the semantics the caller wants.
  */
-function getBooleanInput(name: string): boolean {
+function getBooleanInput(name: string, fallback = false): boolean {
   const raw = core.getInput(name, { required: false }).toLowerCase().trim()
-  return raw === 'true'
+  if (raw === 'true') return true
+  if (raw === 'false') return false
+  return fallback
 }

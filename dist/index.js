@@ -30984,7 +30984,12 @@ const DCO = {
 };
 function commentContent(signed, committerMap) {
     const mode = input.getUseDcoFlag() ? DCO : CLA;
-    return signed ? renderAllSigned(mode) : renderPending(mode, committerMap);
+    const body = signed
+        ? renderAllSigned(mode)
+        : renderPending(mode, committerMap);
+    return committerMap.openerMismatch
+        ? renderOpenerMismatchBlock(committerMap.openerMismatch) + body
+        : body;
 }
 function renderAllSigned(mode) {
     const allSignedLine = input.getCustomAllSignedPrComment() ||
@@ -31027,6 +31032,33 @@ function renderPending(mode, committerMap) {
 }
 function botSignature(mode) {
     return `<sub>Posted by the **${mode.botName}**.</sub>`;
+}
+/**
+ * Renders the "PR opener is not an author or co-author of any commit" block.
+ * Prepended to the rest of the comment so maintainers see it first. The
+ * warning is either a hard block (require-opener-as-author=true; the default)
+ * or a heads-up (require-opener-as-author=false, for repos with legitimate
+ * cherry-pick / patch-submission workflows).
+ */
+function renderOpenerMismatchBlock(mismatch) {
+    const authorList = mismatch.commitAuthors.length > 0
+        ? mismatch.commitAuthors.map(a => `@${a}`).join(', ')
+        : '*(no commit authors could be identified)*';
+    if (mismatch.hardFail) {
+        return `> [!CAUTION]
+> **Pull Request opener is not an author or co-author of any commit in this PR.**
+>
+> - Opener: @${mismatch.opener}
+> - Commit authors: ${authorList}
+>
+> This check is blocked to guard against commits being submitted under a trusted identity the submitter does not control. If this PR is a legitimate cherry-pick, release-engineering submission, or mailing-list-style patch delivery, the repository maintainer can opt out of this check by setting \`require-opener-as-author: 'false'\` on the \`contributor-assistant/github-action\` step in the repository's workflow.
+
+`;
+    }
+    return `> [!NOTE]
+> Pull Request opener @${mismatch.opener} is not an author or co-author of any commit in this PR (commit authors: ${authorList}). The CLA check will still proceed and requires every listed author plus @${mismatch.opener} to have signed.
+
+`;
 }
 /**
  * Renders the "commit author email isn't linked to a GitHub account" block.
@@ -31302,14 +31334,19 @@ const persistence_1 = __nccwpck_require__(582);
 const pullRequestComment_1 = __importDefault(__nccwpck_require__(3677));
 const pullRerunRunner_1 = __nccwpck_require__(8272);
 const errors_1 = __nccwpck_require__(7848);
+const getInputs_1 = __nccwpck_require__(1902);
 function setupClaCheck() {
     return __awaiter(this, void 0, void 0, function* () {
         let committerMap = getInitialCommittersMap();
-        let committers = yield (0, graphql_1.default)();
-        committers = includePullRequestOpener(committers);
+        const commitAuthors = yield (0, graphql_1.default)();
+        const openerMismatch = detectOpenerMismatch(commitAuthors);
+        let committers = includePullRequestOpener(commitAuthors);
         committers = (0, checkAllowList_1.checkAllowList)(committers);
         const { claFileContent, sha } = (yield getCLAFileContentandSHA(committers, committerMap));
         committerMap = prepareCommiterMap(committers, claFileContent);
+        if (openerMismatch) {
+            committerMap.openerMismatch = openerMismatch;
+        }
         try {
             const reactedCommitters = (yield (0, pullRequestComment_1.default)(committerMap, committers));
             if (reactedCommitters === null || reactedCommitters === void 0 ? void 0 : reactedCommitters.newSigned.length) {
@@ -31327,6 +31364,10 @@ function setupClaCheck() {
                 }
                 catch (err) {
                     core.warning(`Best-effort rerun of prior workflow failed: ${(0, errors_1.errorMessage)(err)}`);
+                }
+                if (openerMismatch === null || openerMismatch === void 0 ? void 0 : openerMismatch.hardFail) {
+                    core.setFailed(`Pull Request opener @${openerMismatch.opener} is not recorded as an author or co-author of any commit in this PR. If this is intentional (e.g. a cherry-pick or release-engineering workflow), set the 'require-opener-as-author' action input to 'false'.`);
+                    return;
                 }
                 return;
             }
@@ -31400,9 +31441,8 @@ const getInitialCommittersMap = () => ({
  * was authored by someone else.
  */
 function includePullRequestOpener(committers) {
-    var _a;
-    const opener = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.user;
-    if (!(opener === null || opener === void 0 ? void 0 : opener.id) || !opener.login)
+    const opener = readOpener();
+    if (!opener)
         return committers;
     if (committers.some(c => c.id === opener.id))
         return committers;
@@ -31414,6 +31454,36 @@ function includePullRequestOpener(committers) {
         },
         ...committers
     ];
+}
+/**
+ * Return {opener, commitAuthors, hardFail} if the PR opener is NOT recorded
+ * as an author or co-author of any commit in the PR. This is an
+ * impersonation-adjacent signal: someone opening a PR whose commits are all
+ * attributed to someone else. Undefined when the opener is in the trail or
+ * when we cannot read the opener identity from the event payload.
+ *
+ * hardFail tracks the 'require-opener-as-author' input so callers can
+ * decide whether to call setFailed vs just render a warning.
+ */
+function detectOpenerMismatch(commitAuthors) {
+    const opener = readOpener();
+    if (!opener)
+        return undefined;
+    if (commitAuthors.some(c => c.id === opener.id))
+        return undefined;
+    core.setOutput('opener_not_in_commits', true);
+    return {
+        opener: opener.login,
+        commitAuthors: commitAuthors.map(c => c.name).filter(n => n.length > 0),
+        hardFail: (0, getInputs_1.requireOpenerAsAuthor)()
+    };
+}
+function readOpener() {
+    var _a;
+    const opener = (_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.user;
+    if (!(opener === null || opener === void 0 ? void 0 : opener.id) || !opener.login)
+        return undefined;
+    return { id: opener.id, login: opener.login };
 }
 
 
@@ -31550,7 +31620,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.suggestRecheck = exports.lockPullRequestAfterMerge = exports.getCustomPrSignComment = exports.getUseDcoFlag = exports.getCustomAllSignedPrComment = exports.getCustomNotSignedPrComment = exports.getCreateFileCommitMessage = exports.getSignedCommitMessage = exports.getAllowListItem = exports.getBranch = exports.getPathToDocument = exports.getPathToSignatures = exports.getRemoteOrgName = exports.getRemoteRepoName = void 0;
+exports.requireOpenerAsAuthor = exports.suggestRecheck = exports.lockPullRequestAfterMerge = exports.getCustomPrSignComment = exports.getUseDcoFlag = exports.getCustomAllSignedPrComment = exports.getCustomNotSignedPrComment = exports.getCreateFileCommitMessage = exports.getSignedCommitMessage = exports.getAllowListItem = exports.getBranch = exports.getPathToDocument = exports.getPathToSignatures = exports.getRemoteOrgName = exports.getRemoteRepoName = void 0;
 const core = __importStar(__nccwpck_require__(7484));
 const getRemoteRepoName = () => {
     return core.getInput('remote-repository-name', { required: false });
@@ -31585,13 +31655,29 @@ exports.lockPullRequestAfterMerge = lockPullRequestAfterMerge;
 const suggestRecheck = () => getBooleanInput('suggest-recheck');
 exports.suggestRecheck = suggestRecheck;
 /**
+ * Whether the PR opener must be recorded as an author or co-author of at
+ * least one commit in the PR. When true (the default), an opener who is not
+ * in the authorship trail causes the check to fail — a guard against
+ * impersonation of an attacker-submitted patch attributed to a trusted
+ * identity. Opt out by setting 'false' if your workflow involves submitters
+ * who legitimately push commits authored by others (cherry-picks, release
+ * engineers applying accepted patches, mailing-list-style patch submission).
+ */
+const requireOpenerAsAuthor = () => getBooleanInput('require-opener-as-author', true);
+exports.requireOpenerAsAuthor = requireOpenerAsAuthor;
+/**
  * Parses the action input as a boolean, tolerating unset / empty. Actions
  * accept only strings; 'true' / 'false' (case-insensitive) are the supported
- * values. Anything else — including an unset input — returns false.
+ * values. Anything else falls back to `fallback` (default false), so an
+ * unset input preserves the semantics the caller wants.
  */
-function getBooleanInput(name) {
+function getBooleanInput(name, fallback = false) {
     const raw = core.getInput(name, { required: false }).toLowerCase().trim();
-    return raw === 'true';
+    if (raw === 'true')
+        return true;
+    if (raw === 'false')
+        return false;
+    return fallback;
 }
 
 

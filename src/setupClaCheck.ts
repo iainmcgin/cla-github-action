@@ -17,12 +17,14 @@ import {
 import prCommentSetup from './pullrequest/pullRequestComment'
 import { reRunLastWorkFlowIfRequired } from './pullRerunRunner'
 import { errorMessage, errorStatus } from './shared/errors'
+import { requireOpenerAsAuthor } from './shared/getInputs'
 
 export async function setupClaCheck() {
   let committerMap = getInitialCommittersMap()
 
-  let committers = await getCommitters()
-  committers = includePullRequestOpener(committers)
+  const commitAuthors = await getCommitters()
+  const openerMismatch = detectOpenerMismatch(commitAuthors)
+  let committers = includePullRequestOpener(commitAuthors)
   committers = checkAllowList(committers)
 
   const { claFileContent, sha } = (await getCLAFileContentandSHA(
@@ -31,6 +33,9 @@ export async function setupClaCheck() {
   )) as ClafileContentAndSha
 
   committerMap = prepareCommiterMap(committers, claFileContent) as CommitterMap
+  if (openerMismatch) {
+    committerMap.openerMismatch = openerMismatch
+  }
 
   try {
     const reactedCommitters = (await prCommentSetup(
@@ -56,6 +61,12 @@ export async function setupClaCheck() {
         core.warning(
           `Best-effort rerun of prior workflow failed: ${errorMessage(err)}`
         )
+      }
+      if (openerMismatch?.hardFail) {
+        core.setFailed(
+          `Pull Request opener @${openerMismatch.opener} is not recorded as an author or co-author of any commit in this PR. If this is intentional (e.g. a cherry-pick or release-engineering workflow), set the 'require-opener-as-author' action input to 'false'.`
+        )
+        return
       }
       return
     } else {
@@ -152,10 +163,8 @@ const getInitialCommittersMap = (): CommitterMap => ({
  * was authored by someone else.
  */
 function includePullRequestOpener(committers: Committer[]): Committer[] {
-  const opener = context.payload.pull_request?.user as
-    | { id?: number; login?: string }
-    | undefined
-  if (!opener?.id || !opener.login) return committers
+  const opener = readOpener()
+  if (!opener) return committers
   if (committers.some(c => c.id === opener.id)) return committers
   return [
     {
@@ -165,4 +174,36 @@ function includePullRequestOpener(committers: Committer[]): Committer[] {
     },
     ...committers
   ]
+}
+
+/**
+ * Return {opener, commitAuthors, hardFail} if the PR opener is NOT recorded
+ * as an author or co-author of any commit in the PR. This is an
+ * impersonation-adjacent signal: someone opening a PR whose commits are all
+ * attributed to someone else. Undefined when the opener is in the trail or
+ * when we cannot read the opener identity from the event payload.
+ *
+ * hardFail tracks the 'require-opener-as-author' input so callers can
+ * decide whether to call setFailed vs just render a warning.
+ */
+function detectOpenerMismatch(
+  commitAuthors: Committer[]
+): { opener: string; commitAuthors: string[]; hardFail: boolean } | undefined {
+  const opener = readOpener()
+  if (!opener) return undefined
+  if (commitAuthors.some(c => c.id === opener.id)) return undefined
+  core.setOutput('opener_not_in_commits', true)
+  return {
+    opener: opener.login,
+    commitAuthors: commitAuthors.map(c => c.name).filter(n => n.length > 0),
+    hardFail: requireOpenerAsAuthor()
+  }
+}
+
+function readOpener(): { id: number; login: string } | undefined {
+  const opener = context.payload.pull_request?.user as
+    | { id?: number; login?: string }
+    | undefined
+  if (!opener?.id || !opener.login) return undefined
+  return { id: opener.id, login: opener.login }
 }

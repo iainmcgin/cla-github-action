@@ -41,6 +41,16 @@ inputs:
   suggest-recheck:
     description: "Controls whether or not the action's comment should suggest that users comment `recheck`."
     default: "true"
+  require-opener-as-author:
+    description: >
+      When 'true' (the default), fail the check if the Pull Request opener is
+      not recorded as an author or co-author of any commit in the PR. This
+      guards against an attacker opening a PR whose commits are attributed to
+      a trusted identity the attacker does not control. Set to 'false' for
+      workflows where the PR submitter legitimately pushes commits authored by
+      others (cherry-picks, release-engineering patch submission, mailing-list
+      style contribution workflows).
+    default: "true"
 runs:
   using: "node24"
   main: 'dist/index.js'

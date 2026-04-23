@@ -32,6 +32,19 @@ export interface CommitterMap {
   signed: Committer[]
   notSigned: Committer[]
   unknown: Committer[]
+  /**
+   * Populated when the PR opener is not listed as an author or co-author of
+   * any commit in the PR. The bot comment renders a CAUTION block naming the
+   * opener and the actual commit authors so maintainers can see the
+   * mismatch at a glance.
+   */
+  openerMismatch?:
+    | {
+        opener: string
+        commitAuthors: string[]
+        hardFail: boolean
+      }
+    | undefined
 }
 
 export interface ReactedCommitterMap {
