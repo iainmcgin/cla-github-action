@@ -330,4 +330,138 @@ describe('CLA action end-to-end scenarios', () => {
     )
     watch.restore()
   })
+
+  it('PR opener who did not author any commit is required to sign', async () => {
+    const watch = watchCore()
+    // Commits authored by bob only; alice is the PR opener.
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 13,
+      head: { sha: 'headsha', ref: 'feature/opener' },
+      commits: [{ author: { login: 'bob', id: 2002 } }]
+    })
+    // Bob has already signed; alice has not.
+    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
+      signedContributors: [{ name: 'bob', id: 2002 }]
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 13,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        action: 'opened',
+        pull_request: {
+          number: 13,
+          state: 'open',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
+      }
+    })
+
+    await runAction()
+
+    const comments = fake.repo('acme', 'widgets').listComments(13)
+    expect(comments).toHaveLength(1)
+    expect(comments[0]!.body).toContain(':x: @alice')
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 13/
+    )
+    watch.restore()
+  })
+
+  it('Co-authored-by trailers count as committers', async () => {
+    const watch = watchCore()
+    // Commit authored by alice, co-authored by bob (via noreply id form).
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 14,
+      head: { sha: 'headsha', ref: 'feature/coauthor' },
+      commits: [
+        {
+          author: { login: 'alice', id: 1001 },
+          message:
+            'Implement thing\n\nBody of commit.\n\nCo-authored-by: Bob <2002+bob@users.noreply.github.com>'
+        }
+      ]
+    })
+    // Alice has signed; bob has not.
+    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
+      signedContributors: [{ name: 'alice', id: 1001 }]
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 14,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        action: 'opened',
+        pull_request: {
+          number: 14,
+          state: 'open',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
+      }
+    })
+
+    await runAction()
+
+    const comments = fake.repo('acme', 'widgets').listComments(14)
+    expect(comments).toHaveLength(1)
+    const body = comments[0]!.body
+    // Alice shows as signed, bob as unsigned.
+    expect(body).toContain(
+      ':white_check_mark: [alice](https://github.com/alice)'
+    )
+    expect(body).toContain(':x: @bob')
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 14/
+    )
+    watch.restore()
+  })
+
+  it('Co-authored-by trailer with a non-noreply email routes to the unlinked-email warning', async () => {
+    const watch = watchCore()
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 15,
+      head: { sha: 'headsha', ref: 'feature/coauthor-email' },
+      commits: [
+        {
+          author: { login: 'alice', id: 1001 },
+          message: 'Fix\n\nCo-authored-by: Carol <carol@example.com>'
+        }
+      ]
+    })
+    fake.repo('acme', 'widgets').setFile('signatures/cla.json', {
+      signedContributors: [{ name: 'alice', id: 1001 }]
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 15,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        action: 'opened',
+        pull_request: {
+          number: 15,
+          state: 'open',
+          user: { login: 'alice', id: 1001 }
+        },
+        repository: { id: fake.repo('acme', 'widgets').state.id }
+      }
+    })
+
+    await runAction()
+
+    const body = fake.repo('acme', 'widgets').listComments(15)[0]!.body
+    expect(body).toContain('[!WARNING]')
+    expect(body).toContain('carol@example.com')
+    watch.restore()
+  })
 })

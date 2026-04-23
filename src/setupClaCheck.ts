@@ -22,6 +22,7 @@ export async function setupClaCheck() {
   let committerMap = getInitialCommittersMap()
 
   let committers = await getCommitters()
+  committers = includePullRequestOpener(committers)
   committers = checkAllowList(committers)
 
   const { claFileContent, sha } = (await getCLAFileContentandSHA(
@@ -143,3 +144,25 @@ const getInitialCommittersMap = (): CommitterMap => ({
   notSigned: [],
   unknown: []
 })
+
+/**
+ * Prepend the PR opener to the committer set if they are not already present
+ * via a commit or Co-authored-by trailer. The PR submitter is a contributor
+ * to the merge in their own right and must sign the CLA, even if every commit
+ * was authored by someone else.
+ */
+function includePullRequestOpener(committers: Committer[]): Committer[] {
+  const opener = context.payload.pull_request?.user as
+    | { id?: number; login?: string }
+    | undefined
+  if (!opener?.id || !opener.login) return committers
+  if (committers.some(c => c.id === opener.id)) return committers
+  return [
+    {
+      name: opener.login,
+      id: opener.id,
+      pullRequestNo: context.issue.number
+    },
+    ...committers
+  ]
+}

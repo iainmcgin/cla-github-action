@@ -2,6 +2,7 @@ import { octokit } from './octokit'
 import { context } from '@actions/github'
 import { Committer } from './interfaces'
 import { errorMessage } from './shared/errors'
+import { parseCoAuthors } from './shared/coAuthors'
 
 interface GraphQLUser {
   id?: string
@@ -16,6 +17,7 @@ interface GraphQLActor {
   user?: GraphQLUser | null
 }
 interface GraphQLCommit {
+  message?: string
   author?: GraphQLActor
   committer?: GraphQLActor
 }
@@ -45,6 +47,7 @@ query($owner:String! $name:String! $number:Int! $cursor:String){
                 edges {
                     node {
                         commit {
+                            message
                             author {
                                 email
                                 name
@@ -68,6 +71,15 @@ export default async function getCommitters(): Promise<Committer[]> {
   try {
     const seenKeys = new Set<string>()
     const committers: Committer[] = []
+
+    function addCommitter(c: Committer): void {
+      const key = `${c.id}:${c.email ?? ''}:${c.name}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        committers.push(c)
+      }
+    }
+
     let cursor: string | null = null
     let hasNextPage = true
 
@@ -83,22 +95,36 @@ export default async function getCommitters(): Promise<Committer[]> {
       for (const edge of page.edges) {
         const commit = edge.node.commit
         const linkedUser = commit.author?.user || commit.committer?.user
-        // Fall back to the raw author/committer actor for the display name +
-        // the email that will be surfaced when no GitHub user is linked.
         const rawActor = commit.author || commit.committer || {}
         const isLinked = Boolean(linkedUser?.databaseId)
-        const user: Committer = {
+        addCommitter({
           name: linkedUser?.login || rawActor.name || rawActor.email || '',
           id: linkedUser?.databaseId || 0,
           pullRequestNo: context.issue.number,
           ...(isLinked ? {} : { email: rawActor.email })
-        }
-        // Dedup by (id, email) so two commits from the same unlinked address
-        // collapse but two different unlinked addresses don't.
-        const key = `${user.id}:${user.email ?? ''}:${user.name}`
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key)
-          committers.push(user)
+        })
+
+        // Co-authored-by: trailers on the commit message count toward the
+        // committer set. If the trailer email is a GitHub noreply form
+        // (<id>+<login>@users.noreply.github.com or
+        // <login>@users.noreply.github.com), extract the login + numeric id
+        // directly. Otherwise surface as an unknown committer with email so
+        // the unlinked-email block guides the contributor.
+        for (const coAuthor of parseCoAuthors(commit.message || '')) {
+          if (coAuthor.noreplyId && coAuthor.noreplyLogin) {
+            addCommitter({
+              name: coAuthor.noreplyLogin,
+              id: coAuthor.noreplyId,
+              pullRequestNo: context.issue.number
+            })
+          } else {
+            addCommitter({
+              name: coAuthor.name,
+              id: 0,
+              pullRequestNo: context.issue.number,
+              email: coAuthor.email
+            })
+          }
         }
       }
       cursor = page.pageInfo.endCursor

@@ -10,6 +10,18 @@ the logical unit of work. Each entry links to the commit that introduced it.
 ## Unreleased
 
 ### Added
+- **PR opener and `Co-authored-by:` trailers are now part of the committer
+  set.** Previously the action enumerated only `commit.author` (with
+  `commit.committer` as fallback) from each PR commit. If Alice opened a PR
+  whose commits were authored entirely by Bob, Alice was never required to
+  sign. Likewise any `Co-authored-by: Name <email>` trailer in a commit
+  message was invisible to the CLA check. Now: the PR submitter
+  (`context.payload.pull_request.user`) is prepended to the committer set,
+  and trailers are parsed out of every commit message. For noreply-form
+  trailer emails (`<id>+<login>@users.noreply.github.com` and the legacy
+  `<login>@users.noreply.github.com`) the login and numeric id are extracted
+  directly. Non-noreply trailer emails route through the same unlinked-email
+  warning block.
 - **Dedicated "unlinked email" guidance on unknown committers.** When a commit
   author's email is not linked to any GitHub user, the bot now posts a
   prominent `> [!WARNING]` block that lists each unlinked email and gives the

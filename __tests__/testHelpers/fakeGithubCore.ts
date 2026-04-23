@@ -24,6 +24,7 @@ export interface PullRequest {
   state?: 'open' | 'closed'
   commits: Array<{
     author: { login?: string; name?: string; id?: number; email?: string }
+    message?: string
   }>
 }
 
@@ -400,6 +401,7 @@ export function createFakeGitHubCore(): FakeGitHubCore {
     const edges = pr.commits.map(c => ({
       node: {
         commit: {
+          message: c.message || '',
           author: {
             email: c.author.email || '',
             name: c.author.name || c.author.login || '',
