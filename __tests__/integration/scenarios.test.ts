@@ -285,4 +285,49 @@ describe('CLA action end-to-end scenarios', () => {
     ).toEqual([])
     watch.restore()
   })
+
+  it('PR with a commit authored by an email not linked to any GitHub user: posts the unlinked-email warning', async () => {
+    const watch = watchCore()
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 12,
+      head: { sha: 'headsha', ref: 'feature/email' },
+      // No `login` / `id` — this maps to an unknown committer in the action.
+      commits: [
+        { author: { name: 'Mystery Contributor', email: 'typo@example.com' } }
+      ]
+    })
+    fake
+      .repo('acme', 'widgets')
+      .setFile('signatures/cla.json', { signedContributors: [] })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 12,
+      actor: 'mystery',
+      eventName: 'pull_request_target',
+      payload: {
+        pull_request: { number: 12, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
+        action: 'opened'
+      }
+    })
+
+    await runAction()
+
+    const comments = fake.repo('acme', 'widgets').listComments(12)
+    expect(comments).toHaveLength(1)
+    const body = comments[0]!.body
+    // The warning block, the email, and both remediation paths.
+    expect(body).toContain('[!WARNING]')
+    expect(body).toContain('typo@example.com')
+    expect(body).toContain('github.com/settings/emails')
+    expect(body).toContain('Rewrite the commits')
+    // Still marked failed — the action cannot tell whether this committer
+    // has signed.
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 12/
+    )
+    watch.restore()
+  })
 })

@@ -9,6 +9,19 @@ the logical unit of work. Each entry links to the commit that introduced it.
 
 ## Unreleased
 
+### Added
+- **Dedicated "unlinked email" guidance on unknown committers.** When a commit
+  author's email is not linked to any GitHub user, the bot now posts a
+  prominent `> [!WARNING]` block that lists each unlinked email and gives the
+  contributor two concrete remediation paths (link the email at
+  `github.com/settings/emails`, or rewrite the commits with a known email
+  using the exact git commands). Previously this case rendered as a terse
+  aside on the main pending-signatures comment with generic "not a GitHub
+  user" copy. The commit author's email is now carried through the GraphQL
+  committers query and attached to `Committer.email` so the comment can
+  surface the specific address that failed to match.
+
+
 ### Code-review pass (April 2026)
 
 Driven by `PLAN.md` following a deep review. Seven phases:

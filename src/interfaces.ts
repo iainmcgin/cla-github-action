@@ -6,6 +6,13 @@ export interface Committer {
   name: string
   id: number
   pullRequestNo?: number | undefined
+  /**
+   * Commit-author email. Present only when the GraphQL lookup could not map
+   * the commit to a GitHub user (i.e. when this committer ends up in
+   * CommitterMap.unknown). Surfaced to the contributor in the PR comment so
+   * they know which specific email address to link or rewrite.
+   */
+  email?: string | undefined
 }
 
 /**

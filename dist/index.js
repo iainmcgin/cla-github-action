@@ -30281,8 +30281,9 @@ query($owner:String! $name:String! $number:Int! $cursor:String){
 }`;
 function getCommitters() {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c;
         try {
-            const seenNames = new Set();
+            const seenKeys = new Set();
             const committers = [];
             let cursor = null;
             let hasNextPage = true;
@@ -30295,14 +30296,18 @@ function getCommitters() {
                 }));
                 const page = response.repository.pullRequest.commits;
                 for (const edge of page.edges) {
-                    const actor = extractUserFromCommit(edge.node.commit);
-                    const user = {
-                        name: actor.login || actor.name || '',
-                        id: actor.databaseId || 0,
-                        pullRequestNo: github_1.context.issue.number
-                    };
-                    if (!seenNames.has(user.name)) {
-                        seenNames.add(user.name);
+                    const commit = edge.node.commit;
+                    const linkedUser = ((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) || ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user);
+                    // Fall back to the raw author/committer actor for the display name +
+                    // the email that will be surfaced when no GitHub user is linked.
+                    const rawActor = commit.author || commit.committer || {};
+                    const isLinked = Boolean(linkedUser === null || linkedUser === void 0 ? void 0 : linkedUser.databaseId);
+                    const user = Object.assign({ name: (linkedUser === null || linkedUser === void 0 ? void 0 : linkedUser.login) || rawActor.name || rawActor.email || '', id: (linkedUser === null || linkedUser === void 0 ? void 0 : linkedUser.databaseId) || 0, pullRequestNo: github_1.context.issue.number }, (isLinked ? {} : { email: rawActor.email }));
+                    // Dedup by (id, email) so two commits from the same unlinked address
+                    // collapse but two different unlinked addresses don't.
+                    const key = `${user.id}:${(_c = user.email) !== null && _c !== void 0 ? _c : ''}:${user.name}`;
+                    if (!seenKeys.has(key)) {
+                        seenKeys.add(key);
                         committers.push(user);
                     }
                 }
@@ -30315,14 +30320,6 @@ function getCommitters() {
             throw new Error(`graphql call to get the committers details failed: ${(0, errors_1.errorMessage)(e)}`);
         }
     });
-}
-function extractUserFromCommit(commit) {
-    var _a, _b;
-    return (((_a = commit.author) === null || _a === void 0 ? void 0 : _a.user) ||
-        ((_b = commit.committer) === null || _b === void 0 ? void 0 : _b.user) ||
-        commit.author ||
-        commit.committer ||
-        {});
 }
 
 
@@ -30995,10 +30992,7 @@ function renderPending(mode, committerMap) {
         text += '<br/>';
     }
     if (committerMap.unknown.length > 0) {
-        const seem = committerMap.unknown.length > 1 ? 'seem' : 'seems';
-        const names = committerMap.unknown.map(c => c.name).join(', ');
-        text += `**${names}** ${seem} not to be a GitHub user.`;
-        text += ` You need a GitHub account to be able to sign the ${mode.label}. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>`;
+        text += renderUnlinkedCommitBlock(mode, committerMap.unknown);
     }
     if (input.suggestRecheck()) {
         text +=
@@ -31009,6 +31003,51 @@ function renderPending(mode, committerMap) {
 }
 function botSignature(mode) {
     return `<sub>Posted by the **${mode.botName}**.</sub>`;
+}
+/**
+ * Renders the "commit author email isn't linked to a GitHub account" block.
+ * Shown both inline (when mixed with signed/unsigned committers) and as the
+ * sole body (when every committer is unlinked — in which case this is the
+ * only actionable thing in the comment).
+ */
+function renderUnlinkedCommitBlock(mode, unlinked) {
+    const plural = unlinked.length > 1;
+    const verb = plural ? 'were' : 'was';
+    const commits = plural ? 'commits' : 'commit';
+    // Render each unlinked identity as "name <email>" when we have an email to
+    // show, otherwise just the name. Wrap email in backticks so Markdown does
+    // not interpret it as a mailto: auto-link.
+    const identityLines = unlinked
+        .map(c => {
+        const display = c.email && c.email !== c.name ? `${c.name} \`<${c.email}>\`` : c.name;
+        return `- ${display}`;
+    })
+        .join('\n');
+    return `
+
+> [!WARNING]
+> ${unlinked.length} ${commits} in this PR ${verb} authored by an email address that is not linked to any GitHub user, so we cannot tell whether the author has signed the ${mode.label}.
+>
+> Unlinked author${plural ? 's' : ''}:
+>
+> ${identityLines.replace(/\n/g, '\n> ')}
+>
+> **To unblock this PR, do one of the following:**
+>
+> 1. **Link the email to your GitHub account** (recommended). Add each address above at [github.com/settings/emails](https://github.com/settings/emails), then push another commit (or comment \`recheck\`) so this check re-runs. See [why commits are not linked to a user](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/troubleshooting-commits/why-are-my-commits-linked-to-the-wrong-user#commits-are-not-linked-to-any-user) for details.
+>
+> 2. **Rewrite the commits** to use an email that is already linked to your GitHub account:
+>
+>    \`\`\`bash
+>    # Set the correct email locally (one-off, for this repo):
+>    git config user.email you@example.com
+>    # Rewrite every commit on this branch with the corrected identity:
+>    git rebase -i --root --exec 'git commit --amend --reset-author --no-edit'
+>    git push --force-with-lease
+>    \`\`\`
+>
+>    After the push, comment \`recheck\` on this PR (or just re-push) to re-run the check.
+<br/>`;
 }
 
 

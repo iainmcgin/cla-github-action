@@ -66,7 +66,7 @@ query($owner:String! $name:String! $number:Int! $cursor:String){
 
 export default async function getCommitters(): Promise<Committer[]> {
   try {
-    const seenNames = new Set<string>()
+    const seenKeys = new Set<string>()
     const committers: Committer[] = []
     let cursor: string | null = null
     let hasNextPage = true
@@ -81,14 +81,23 @@ export default async function getCommitters(): Promise<Committer[]> {
 
       const page = response.repository.pullRequest.commits
       for (const edge of page.edges) {
-        const actor = extractUserFromCommit(edge.node.commit)
+        const commit = edge.node.commit
+        const linkedUser = commit.author?.user || commit.committer?.user
+        // Fall back to the raw author/committer actor for the display name +
+        // the email that will be surfaced when no GitHub user is linked.
+        const rawActor = commit.author || commit.committer || {}
+        const isLinked = Boolean(linkedUser?.databaseId)
         const user: Committer = {
-          name: actor.login || actor.name || '',
-          id: actor.databaseId || 0,
-          pullRequestNo: context.issue.number
+          name: linkedUser?.login || rawActor.name || rawActor.email || '',
+          id: linkedUser?.databaseId || 0,
+          pullRequestNo: context.issue.number,
+          ...(isLinked ? {} : { email: rawActor.email })
         }
-        if (!seenNames.has(user.name)) {
-          seenNames.add(user.name)
+        // Dedup by (id, email) so two commits from the same unlinked address
+        // collapse but two different unlinked addresses don't.
+        const key = `${user.id}:${user.email ?? ''}:${user.name}`
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key)
           committers.push(user)
         }
       }
@@ -102,14 +111,4 @@ export default async function getCommitters(): Promise<Committer[]> {
       `graphql call to get the committers details failed: ${errorMessage(e)}`
     )
   }
-}
-
-function extractUserFromCommit(
-  commit: GraphQLCommit
-): GraphQLUser & GraphQLActor {
-  return (commit.author?.user ||
-    commit.committer?.user ||
-    commit.author ||
-    commit.committer ||
-    {}) as GraphQLUser & GraphQLActor
 }

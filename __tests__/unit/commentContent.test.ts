@@ -61,15 +61,61 @@ describe('commentContent (CLA mode)', () => {
     expect(body).toContain('ask that you all sign')
   })
 
-  it('mentions unknown (non-GitHub-user) committers separately', () => {
-    const body = commentContent(
-      false,
-      committerMap({
-        unknown: [{ name: 'typo@example.com', id: 0, pullRequestNo: 7 }]
-      })
-    )
-    expect(body).toContain('typo@example.com')
-    expect(body).toContain('seems not to be a GitHub user')
+  describe('unlinked-email block', () => {
+    it('surfaces a warning with the email and both fix options when exactly one commit has an unlinked author', () => {
+      const body = commentContent(
+        false,
+        committerMap({
+          unknown: [
+            {
+              name: 'Alice',
+              id: 0,
+              pullRequestNo: 7,
+              email: 'alice@example.com'
+            }
+          ]
+        })
+      )
+      expect(body).toContain('[!WARNING]')
+      expect(body).toContain('1 commit in this PR was authored')
+      expect(body).toContain('alice@example.com')
+      // Both fix options must be present.
+      expect(body).toContain('github.com/settings/emails')
+      expect(body).toContain('Rewrite the commits')
+      expect(body).toContain('git rebase -i --root')
+    })
+
+    it('uses plural phrasing for multiple unlinked authors and includes every email', () => {
+      const body = commentContent(
+        false,
+        committerMap({
+          unknown: [
+            {
+              name: 'Alice',
+              id: 0,
+              pullRequestNo: 7,
+              email: 'alice@example.com'
+            },
+            { name: 'Bob', id: 0, pullRequestNo: 7, email: 'bob@example.com' }
+          ]
+        })
+      )
+      expect(body).toContain('2 commits in this PR were authored')
+      expect(body).toContain('alice@example.com')
+      expect(body).toContain('bob@example.com')
+    })
+
+    it('falls back to the committer name when the email is missing', () => {
+      const body = commentContent(
+        false,
+        committerMap({
+          unknown: [{ name: 'typo-name', id: 0, pullRequestNo: 7 }]
+        })
+      )
+      expect(body).toContain('typo-name')
+      // No email markdown / no backticks around missing email.
+      expect(body).not.toMatch(/`<\s*>`/)
+    })
   })
 
   it('adds the "recheck" hint when suggest-recheck is true', () => {

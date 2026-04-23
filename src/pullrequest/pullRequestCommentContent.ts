@@ -1,4 +1,4 @@
-import { CommitterMap } from '../interfaces'
+import { Committer, CommitterMap } from '../interfaces'
 import * as input from '../shared/getInputs'
 import { getPrSignComment } from '../shared/pr-sign-comment'
 
@@ -70,10 +70,7 @@ function renderPending(mode: ModeText, committerMap: CommitterMap): string {
   }
 
   if (committerMap.unknown.length > 0) {
-    const seem = committerMap.unknown.length > 1 ? 'seem' : 'seems'
-    const names = committerMap.unknown.map(c => c.name).join(', ')
-    text += `**${names}** ${seem} not to be a GitHub user.`
-    text += ` You need a GitHub account to be able to sign the ${mode.label}. If you have already a GitHub account, please [add the email address used for this commit to your account](https://help.github.com/articles/why-are-my-commits-linked-to-the-wrong-user/#commits-are-not-linked-to-any-user).<br/>`
+    text += renderUnlinkedCommitBlock(mode, committerMap.unknown)
   }
 
   if (input.suggestRecheck()) {
@@ -87,4 +84,56 @@ function renderPending(mode: ModeText, committerMap: CommitterMap): string {
 
 function botSignature(mode: ModeText): string {
   return `<sub>Posted by the **${mode.botName}**.</sub>`
+}
+
+/**
+ * Renders the "commit author email isn't linked to a GitHub account" block.
+ * Shown both inline (when mixed with signed/unsigned committers) and as the
+ * sole body (when every committer is unlinked — in which case this is the
+ * only actionable thing in the comment).
+ */
+function renderUnlinkedCommitBlock(
+  mode: ModeText,
+  unlinked: Committer[]
+): string {
+  const plural = unlinked.length > 1
+  const verb = plural ? 'were' : 'was'
+  const commits = plural ? 'commits' : 'commit'
+
+  // Render each unlinked identity as "name <email>" when we have an email to
+  // show, otherwise just the name. Wrap email in backticks so Markdown does
+  // not interpret it as a mailto: auto-link.
+  const identityLines = unlinked
+    .map(c => {
+      const display =
+        c.email && c.email !== c.name ? `${c.name} \`<${c.email}>\`` : c.name
+      return `- ${display}`
+    })
+    .join('\n')
+
+  return `
+
+> [!WARNING]
+> ${unlinked.length} ${commits} in this PR ${verb} authored by an email address that is not linked to any GitHub user, so we cannot tell whether the author has signed the ${mode.label}.
+>
+> Unlinked author${plural ? 's' : ''}:
+>
+> ${identityLines.replace(/\n/g, '\n> ')}
+>
+> **To unblock this PR, do one of the following:**
+>
+> 1. **Link the email to your GitHub account** (recommended). Add each address above at [github.com/settings/emails](https://github.com/settings/emails), then push another commit (or comment \`recheck\`) so this check re-runs. See [why commits are not linked to a user](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/troubleshooting-commits/why-are-my-commits-linked-to-the-wrong-user#commits-are-not-linked-to-any-user) for details.
+>
+> 2. **Rewrite the commits** to use an email that is already linked to your GitHub account:
+>
+>    \`\`\`bash
+>    # Set the correct email locally (one-off, for this repo):
+>    git config user.email you@example.com
+>    # Rewrite every commit on this branch with the corrected identity:
+>    git rebase -i --root --exec 'git commit --amend --reset-author --no-edit'
+>    git push --force-with-lease
+>    \`\`\`
+>
+>    After the push, comment \`recheck\` on this PR (or just re-push) to re-run the check.
+<br/>`
 }
