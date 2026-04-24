@@ -1,8 +1,14 @@
 > [!NOTE]
 > This is a fork of [contributor-assistant/github-action](https://github.com/contributor-assistant/github-action)
-> (archived upstream 2026-03-23) with the GitHub Actions runtime bumped to Node 24.
-> It is maintained for internal use only and is **not** intended as a general-purpose
-> community successor. No support or issue triage is offered.
+> (archived upstream 2026-03-23). It is maintained for internal use only and is
+> **not** intended as a general-purpose community successor. No support or issue
+> triage is offered.
+>
+> Divergences from upstream are documented in [CHANGELOG.md](./CHANGELOG.md).
+> Highlights: Node 24 runtime, `@actions/github` v6, TypeScript 6 with full
+> strict mode, comprehensive test harness (in-process fake + subprocess smoke
+> tests + pre-/post-refactor regression diff), pagination fixes, and the
+> `require-opener-as-author` impersonation guard.
 
 # Handling CLAs and DCOs via GitHub Action
 
@@ -42,7 +48,8 @@ jobs:
     steps:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
-        uses: contributor-assistant/github-action@v2.6.1
+        # Pin to a full 40-character commit SHA, not a tag — see "Pinning by commit SHA" below.
+        uses: iainmcgin/cla-github-action@6005a968fb4def989e1a08e795f388a1aa331844
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # the below token should have repo scope and must be manually added by you in the repository's secret
@@ -50,7 +57,7 @@ jobs:
           # PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
           path-to-signatures: 'signatures/version1/cla.json'
-          path-to-document: 'https://github.com/cla-assistant/github-action/blob/master/SAPCLA.md' # e.g. a CLA or a DCO document
+          path-to-document: 'https://link/to/your/cla-or-dco/document' # e.g. a CLA or a DCO document
           # branch should not be protected
           branch: 'main'
           allowlist: user1,bot*
@@ -65,8 +72,47 @@ jobs:
           #custom-allsigned-prcomment: 'pull request comment when all contributors has signed, defaults to **CLA Assistant Lite bot** All Contributors have signed the CLA.'
           #lock-pullrequest-aftermerge: false - if you don't want this bot to automatically lock the pull request after merging (default - true)
           #use-dco-flag: true - If you are using DCO instead of CLA
+          #require-opener-as-author: false - if your workflow involves submitters legitimately opening PRs containing only commits authored by others (cherry-picks, release engineering). Default is true.
 
 ```
+
+> [!IMPORTANT]
+> **Pinning by commit SHA**
+>
+> The `uses:` line above references this action by its **full 40-character commit
+> SHA**, not by a version tag like `@v2.6.1`. This is intentional and strongly
+> recommended for all third-party GitHub Actions.
+>
+> Git tags are mutable: a maintainer (or a compromised maintainer account) can
+> retarget `v2.6.1` to a different commit at any time, silently changing what
+> code runs in your CI with full access to `GITHUB_TOKEN`. A commit SHA is
+> content-addressed and immutable — once you have audited the code at that SHA,
+> it cannot change underneath you. See
+> [Why you should pin GitHub Actions by commit hash](https://blog.rafaelgss.dev/why-you-should-pin-actions-by-commit-hash)
+> and GitHub's own
+> [security hardening guide](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-third-party-actions)
+> for the full rationale.
+>
+> **To find the SHA to pin to:**
+>
+> ```bash
+> # Latest commit on master:
+> git ls-remote https://github.com/iainmcgin/cla-github-action.git refs/heads/master
+> ```
+>
+> Or browse to the [commits page](https://github.com/iainmcgin/cla-github-action/commits/master),
+> pick a commit, and copy the full SHA. After pinning, add the human-readable
+> reference as a trailing comment so future readers know what they're looking at:
+>
+> ```yaml
+> uses: iainmcgin/cla-github-action@6005a968fb4def989e1a08e795f388a1aa331844  # 2026-04-24 master
+> ```
+>
+> Tools like [Dependabot](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot)
+> and [Renovate](https://docs.renovatebot.com/modules/manager/github-actions/)
+> understand this format and will open PRs to bump the SHA when a newer commit
+> is available, preserving the comment.
+
 
 ##### Demo for step 1
 
