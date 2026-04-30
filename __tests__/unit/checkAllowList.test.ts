@@ -2,8 +2,8 @@ import { resetEnv, setInput } from '../testHelpers/env'
 import { checkAllowList } from '../../src/checkAllowList'
 import { Committer } from '../../src/interfaces'
 
-function committer(name: string): Committer {
-  return { name, id: 0, pullRequestNo: 1 }
+function committer(name: string, email?: string): Committer {
+  return { name, id: 0, pullRequestNo: 1, ...(email ? { email } : {}) }
 }
 
 describe('checkAllowList', () => {
@@ -82,5 +82,42 @@ describe('checkAllowList', () => {
     expect(
       checkAllowList([committer(''), committer('alice')]).map(c => c.name)
     ).toEqual(['alice'])
+  })
+
+  it('filters out committers whose email matches an exact allow-list entry', () => {
+    setInput('allowlist', 'noreply@anthropic.com')
+    const result = checkAllowList([
+      committer('Claude Opus 4.7', 'noreply@anthropic.com'),
+      committer('alice', 'alice@example.com')
+    ])
+    expect(result.map(c => c.name)).toEqual(['alice'])
+  })
+
+  it('filters out committers whose email matches a glob entry', () => {
+    setInput('allowlist', '*@anthropic.com')
+    const result = checkAllowList([
+      committer('Claude Opus 4.7', 'noreply@anthropic.com'),
+      committer('Claude Sonnet', 'assistant@anthropic.com'),
+      committer('alice', 'alice@example.com')
+    ])
+    expect(result.map(c => c.name)).toEqual(['alice'])
+  })
+
+  it('still filters by name when only the name matches the allow-list', () => {
+    setInput('allowlist', 'iainmcgin')
+    const result = checkAllowList([
+      committer('iainmcgin', 'iain@example.com'),
+      committer('alice', 'alice@example.com')
+    ])
+    expect(result.map(c => c.name)).toEqual(['alice'])
+  })
+
+  it('does not match committers without an email against an email allow-list entry', () => {
+    setInput('allowlist', 'noreply@anthropic.com')
+    const result = checkAllowList([
+      committer('alice'),
+      committer('bob', 'bob@example.com')
+    ])
+    expect(result.map(c => c.name)).toEqual(['alice', 'bob'])
   })
 })

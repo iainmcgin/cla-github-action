@@ -6,20 +6,23 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function isUserAllowListed(committer: string): boolean {
+function isAllowListed(value: string): boolean {
   const allowListPatterns = input.getAllowListItem().split(',')
   return allowListPatterns.some(rawPattern => {
     const pattern = rawPattern.trim()
     if (pattern.includes('*')) {
       const regex = escapeRegExp(pattern).split('\\*').join('.*')
-      return new RegExp(regex).test(committer)
+      return new RegExp(regex).test(value)
     }
-    return pattern === committer
+    return pattern === value
   })
 }
 
 export function checkAllowList(committers: Committer[]): Committer[] {
   return committers.filter(
-    committer => committer && !isUserAllowListed(committer.name)
+    committer =>
+      committer &&
+      !isAllowListed(committer.name) &&
+      !(committer.email && isAllowListed(committer.email))
   )
 }

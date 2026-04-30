@@ -30214,19 +30214,21 @@ const input = __importStar(__nccwpck_require__(1902));
 function escapeRegExp(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-function isUserAllowListed(committer) {
+function isAllowListed(value) {
     const allowListPatterns = input.getAllowListItem().split(',');
     return allowListPatterns.some(rawPattern => {
         const pattern = rawPattern.trim();
         if (pattern.includes('*')) {
             const regex = escapeRegExp(pattern).split('\\*').join('.*');
-            return new RegExp(regex).test(committer);
+            return new RegExp(regex).test(value);
         }
-        return pattern === committer;
+        return pattern === value;
     });
 }
 function checkAllowList(committers) {
-    return committers.filter(committer => committer && !isUserAllowListed(committer.name));
+    return committers.filter(committer => committer &&
+        !isAllowListed(committer.name) &&
+        !(committer.email && isAllowListed(committer.email)));
 }
 
 
