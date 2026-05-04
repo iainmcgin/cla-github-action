@@ -2,9 +2,11 @@
  * Failure-mode scenarios: how does the action behave when GitHub returns a
  * transient 5xx, a 403, or when createFile fails?
  *
- * @octokit/request retries some 5xx transparently, so a single injected
- * failure can be absorbed. These tests therefore inject PERMANENT failures
- * (high times:N) to lock in the behaviour when retries eventually give up.
+ * The Octokit clients have @octokit/plugin-retry installed, which retries 5xx
+ * and network errors with exponential backoff (3 attempts, ~1s/4s/9s delays).
+ * These tests inject PERMANENT failures (high times:N) to lock in the
+ * behaviour after retries are exhausted, and use longer per-test timeouts to
+ * accommodate the retry delays.
  */
 import * as core from '@actions/core'
 import { installFakeGitHub, FakeGitHub } from '../testHelpers/fakeGithub'
@@ -38,6 +40,9 @@ function watchCore() {
 }
 
 describe('error paths', () => {
+  // Retries add up to ~14s of backoff before the action gives up.
+  jest.setTimeout(30000)
+
   let fake: FakeGitHub
 
   beforeEach(() => {
@@ -47,6 +52,52 @@ describe('error paths', () => {
   afterEach(async () => {
     await fake.close()
     resetEnv()
+  })
+
+  it('absorbs a one-shot 5xx via the retry plugin and proceeds normally', async () => {
+    const watch = watchCore()
+    fake.repo('acme', 'widgets').addPullRequest({
+      number: 7,
+      head: { sha: 'headsha', ref: 'feature/cla' },
+      commits: [{ author: { login: 'alice', id: 1001 } }]
+    })
+    fake.repo('acme', 'widgets').setFile('signatures/v1/cla.json', {
+      signedContributors: []
+    })
+    // First GET returns the GitHub "Unicorn!" HTML 500 page; the plugin
+    // retries and the second attempt succeeds.
+    fake.injectFailure({
+      method: 'GET',
+      pathPattern: /\/repos\/acme\/widgets\/contents\/signatures/,
+      status: 500,
+      body: '<!DOCTYPE html><title>Unicorn!</title>',
+      times: 1
+    })
+
+    setContext({
+      owner: 'acme',
+      repo: 'widgets',
+      issueNumber: 7,
+      actor: 'alice',
+      eventName: 'pull_request_target',
+      payload: {
+        pull_request: { number: 7, state: 'open' },
+        repository: { id: fake.repo('acme', 'widgets').state.id },
+        action: 'opened'
+      }
+    })
+
+    await runAction()
+
+    // The action should reach its normal not-yet-signed failure path, NOT
+    // bail with the retrieve-contents error.
+    expect(watch.failures.join('\n')).not.toMatch(
+      /Could not retrieve repository contents/
+    )
+    expect(watch.failures.join('\n')).toMatch(
+      /Committers of Pull Request number 7 have to sign the CLA/
+    )
+    watch.restore()
   })
 
   it('reports the failure cleanly when the contents GET returns a transient 502', async () => {

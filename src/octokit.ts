@@ -1,5 +1,6 @@
 import { getOctokit } from '@actions/github'
 import * as core from '@actions/core'
+import { retry } from '@octokit/plugin-retry'
 
 /** The Octokit instance type returned by @actions/github's getOctokit. */
 export type Octokit = ReturnType<typeof getOctokit>
@@ -13,9 +14,16 @@ function readEnvToken(name: string): string {
   return v
 }
 
+// GitHub's API has periodic transient outages (HTTP 5xx, often the
+// "Unicorn!" HTML page). The retry plugin retries 5xx and network errors
+// with exponential backoff so a single bad request doesn't fail the run.
+function buildOctokit(token: string): Octokit {
+  return getOctokit(token, {}, retry)
+}
+
 export function getDefaultOctokitClient(): Octokit {
   if (!defaultClient) {
-    defaultClient = getOctokit(readEnvToken('GITHUB_TOKEN'))
+    defaultClient = buildOctokit(readEnvToken('GITHUB_TOKEN'))
   }
   return defaultClient
 }
@@ -31,7 +39,7 @@ export function getPATOctokit(): Octokit {
         'PERSONAL_ACCESS_TOKEN is required for remote signatures repo'
       )
     }
-    patClient = getOctokit(token)
+    patClient = buildOctokit(token)
   }
   return patClient
 }
