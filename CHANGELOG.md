@@ -4,10 +4,18 @@ All notable changes to this fork since it diverged from the upstream
 `cla-assistant/github-action` project (archived). The branch point is commit
 [`58daaf8`](../../commit/58daaf8) "Update README to reflect repository status".
 
-This project does not yet follow Semantic Versioning; changes are grouped by
-the logical unit of work. Each entry links to the commit that introduced it.
+Versioning starts at `v3.0.0`, the first major version after the upstream
+project's final release (`v2.7.1`), to make clear this is a divergent line.
+Changes are grouped by the logical unit of work; each entry links to the
+commit that introduced it.
 
 ## Unreleased
+
+_Nothing yet._
+
+## v3.0.0 — 2026-05-07
+
+First tagged release of this fork.
 
 ### Added
 - **Impersonation guard: PR opener must be an author or co-author of at
