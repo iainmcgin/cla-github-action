@@ -49,7 +49,7 @@ jobs:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
         # Pin to a full 40-character commit SHA, not a tag — see "Pinning by commit SHA" below.
-        uses: iainmcgin/cla-github-action@6005a968fb4def989e1a08e795f388a1aa331844
+        uses: iainmcgin/cla-github-action@3e58ace6af840f66fcd80f68c08d76559140df5e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # the below token should have repo scope and must be manually added by you in the repository's secret
@@ -80,11 +80,11 @@ jobs:
 > **Pinning by commit SHA**
 >
 > The `uses:` line above references this action by its **full 40-character commit
-> SHA**, not by a version tag like `@v2.6.1`. This is intentional and strongly
+> SHA**, not by a version tag like `@v3.0.0`. This is intentional and strongly
 > recommended for all third-party GitHub Actions.
 >
 > Git tags are mutable: a maintainer (or a compromised maintainer account) can
-> retarget `v2.6.1` to a different commit at any time, silently changing what
+> retarget `v3.0.0` to a different commit at any time, silently changing what
 > code runs in your CI with full access to `GITHUB_TOKEN`. A commit SHA is
 > content-addressed and immutable — once you have audited the code at that SHA,
 > it cannot change underneath you. See
@@ -100,12 +100,13 @@ jobs:
 > git ls-remote https://github.com/iainmcgin/cla-github-action.git refs/heads/master
 > ```
 >
-> Or browse to the [commits page](https://github.com/iainmcgin/cla-github-action/commits/master),
+> Or browse to the [releases page](https://github.com/iainmcgin/cla-github-action/releases)
+> or [commits page](https://github.com/iainmcgin/cla-github-action/commits/master),
 > pick a commit, and copy the full SHA. After pinning, add the human-readable
 > reference as a trailing comment so future readers know what they're looking at:
 >
 > ```yaml
-> uses: iainmcgin/cla-github-action@6005a968fb4def989e1a08e795f388a1aa331844  # 2026-04-24 master
+> uses: iainmcgin/cla-github-action@3e58ace6af840f66fcd80f68c08d76559140df5e # v3.0.0
 > ```
 >
 > Tools like [Dependabot](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot)
