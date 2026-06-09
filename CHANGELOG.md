@@ -11,7 +11,20 @@ commit that introduced it.
 
 ## Unreleased
 
-_Nothing yet._
+### Fixed
+- **Pull requests closed without merging are no longer locked.** The
+  `lock-pullrequest-aftermerge` feature locked the conversation on *any*
+  `closed` event, including a contributor closing their own unmerged PR.
+  If the PR was later reopened, the stale lock prevented the bot from
+  commenting and the CLA check could never complete. The lock now only
+  applies when the PR was actually merged.
+- **Reopened PRs with a stale bot lock are unlocked automatically.** A
+  merged PR can never be reopened, so a lock found on a reopened PR can
+  only be left over from the lock-on-any-close bug above. When
+  `lock-pullrequest-aftermerge` is enabled, the action removes such a lock
+  before running the CLA check. The recommended workflow in the README now
+  includes `reopened` in its `pull_request_target` trigger types so the
+  check (and the unlock) runs on reopen.
 
 ## v3.0.0 — 2026-05-07
 

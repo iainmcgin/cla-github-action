@@ -32059,15 +32059,28 @@ const core = __importStar(__nccwpck_require__(7484));
 const input = __importStar(__nccwpck_require__(1902));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         try {
             core.info(`CLA Assistant GitHub Action bot has started the process`);
             if (github_1.context.payload.action === 'closed' &&
                 input.lockPullRequestAfterMerge()) {
-                return (0, pullRequestLock_1.lockPullRequest)();
+                if ((_a = github_1.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.merged) {
+                    return (0, pullRequestLock_1.lockPullRequest)();
+                }
+                core.info(`Pull request ${github_1.context.issue.number} was closed without merging, not locking it`);
+                return;
             }
-            else {
-                yield (0, setupClaCheck_1.setupClaCheck)();
+            // A merged PR can never be reopened, so a lock seen here is either left
+            // over from the pre-v3.1 lock-on-any-close bug or was set manually by a
+            // maintainer. We cannot tell the two apart, and the CLA check cannot
+            // complete on a locked PR (the bot cannot comment), so we accept removing
+            // a manual lock as the cost of unsticking the common case.
+            if (github_1.context.payload.action === 'reopened' &&
+                ((_b = github_1.context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.locked) &&
+                input.lockPullRequestAfterMerge()) {
+                yield (0, pullRequestLock_1.unlockPullRequest)();
             }
+            yield (0, setupClaCheck_1.setupClaCheck)();
         }
         catch (error) {
             if (error instanceof Error)
@@ -32819,6 +32832,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.lockPullRequest = lockPullRequest;
+exports.unlockPullRequest = unlockPullRequest;
 const octokit_1 = __nccwpck_require__(3848);
 const core = __importStar(__nccwpck_require__(7484));
 const github_1 = __nccwpck_require__(3228);
@@ -32835,6 +32849,22 @@ function lockPullRequest() {
         }
         catch (e) {
             core.error(`Failed to lock pull request ${pullRequestNo}`);
+        }
+    });
+}
+function unlockPullRequest() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pullRequestNo = github_1.context.issue.number;
+        try {
+            yield octokit_1.octokit.rest.issues.unlock({
+                owner: github_1.context.repo.owner,
+                repo: github_1.context.repo.repo,
+                issue_number: pullRequestNo
+            });
+            core.info(`Unlocked reopened pull request ${pullRequestNo} so the CLA check can proceed`);
+        }
+        catch (e) {
+            core.error(`Failed to unlock pull request ${pullRequestNo}; the CLA check will likely fail because the bot cannot comment on a locked pull request. A maintainer should unlock the conversation manually.`);
         }
     });
 }
