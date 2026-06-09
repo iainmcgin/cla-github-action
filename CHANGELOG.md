@@ -11,20 +11,27 @@ commit that introduced it.
 
 ## Unreleased
 
+_Nothing yet._
+
+## v3.1.0 — 2026-06-09
+
 ### Fixed
-- **Pull requests closed without merging are no longer locked.** The
-  `lock-pullrequest-aftermerge` feature locked the conversation on *any*
-  `closed` event, including a contributor closing their own unmerged PR.
-  If the PR was later reopened, the stale lock prevented the bot from
-  commenting and the CLA check could never complete. The lock now only
-  applies when the PR was actually merged.
-- **Reopened PRs with a stale bot lock are unlocked automatically.** A
-  merged PR can never be reopened, so a lock found on a reopened PR can
-  only be left over from the lock-on-any-close bug above. When
-  `lock-pullrequest-aftermerge` is enabled, the action removes such a lock
-  before running the CLA check. The recommended workflow in the README now
-  includes `reopened` in its `pull_request_target` trigger types so the
-  check (and the unlock) runs on reopen.
+- **Pull requests closed without merging are no longer locked.**
+  ([`30dab6b`](../../commit/30dab6b)) The `lock-pullrequest-aftermerge`
+  feature locked the conversation on *any* `closed` event, including a
+  contributor closing their own unmerged PR. If the PR was later
+  reopened, the stale lock prevented the bot from commenting and the CLA
+  check could never complete. The lock now only applies when the PR was
+  actually merged.
+- **Reopened PRs with a stale lock are unlocked automatically.**
+  ([`30dab6b`](../../commit/30dab6b)) A merged PR can never be reopened,
+  so a lock found on a reopened PR is either left over from the
+  lock-on-any-close bug above or was set manually by a maintainer; the
+  action cannot tell the two apart and removes it so the CLA check can
+  comment again. Applies only when `lock-pullrequest-aftermerge` is
+  enabled. The recommended workflow in the README now includes
+  `reopened` in its `pull_request_target` trigger types so the check
+  (and the unlock) runs on reopen.
 
 ## v3.0.0 — 2026-05-07
 
