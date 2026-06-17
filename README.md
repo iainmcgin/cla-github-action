@@ -49,7 +49,7 @@ jobs:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
         # Pin to a full 40-character commit SHA, not a tag — see "Pinning by commit SHA" below.
-        uses: iainmcgin/cla-github-action@b2654283c3d541393bf2c6efa1e0097537186313 # v3.1.0
+        uses: iainmcgin/cla-github-action@0d27e5a16278d4adb6b0c4b92f08ad27b0a21dc8 # v3.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # the below token should have repo scope and must be manually added by you in the repository's secret
@@ -106,7 +106,7 @@ jobs:
 > reference as a trailing comment so future readers know what they're looking at:
 >
 > ```yaml
-> uses: iainmcgin/cla-github-action@b2654283c3d541393bf2c6efa1e0097537186313 # v3.1.0
+> uses: iainmcgin/cla-github-action@0d27e5a16278d4adb6b0c4b92f08ad27b0a21dc8 # v3.2.0
 > ```
 >
 > Tools like [Dependabot](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot)
