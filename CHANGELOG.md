@@ -11,9 +11,13 @@ commit that introduced it.
 
 ## Unreleased
 
+_Nothing yet._
+
+## v3.2.0 — 2026-06-17
+
 ### Changed
 - **CLA sign-comment matching tolerates a small amount of surrounding
-  text.** A comment now counts as a signature when the configured phrase
+  text.** ([`1f440bd`](../../commit/1f440bd)) A comment now counts as a signature when the configured phrase
   appears on its own line (or its own block of lines, for a multi-line
   `custom-pr-sign-comment`), case-insensitive, with trailing `.`/`!`
   ignored, and any other text in the comment is no longer than the
