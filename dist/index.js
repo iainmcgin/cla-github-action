@@ -32647,13 +32647,11 @@ const pr_sign_comment_1 = __nccwpck_require__(1595);
 const CLA = {
     label: 'CLA',
     documentTitle: 'Contributor License Agreement',
-    defaultSignPhrase: 'I have read the CLA Document and I hereby sign the CLA',
     botName: 'CLA Assistant Lite bot'
 };
 const DCO = {
     label: 'DCO',
     documentTitle: 'Developer Certificate of Origin',
-    defaultSignPhrase: 'I have read the DCO Document and I hereby sign the DCO',
     botName: 'DCO Assistant Lite bot'
 };
 function commentContent(signed, committerMap) {
@@ -32676,9 +32674,7 @@ function renderPending(mode, committerMap) {
     const introTemplate = input.getCustomNotSignedPrComment() ||
         `<br/>Thank you for your submission, we really appreciate it. Like many open-source projects, we ask that $you sign our [${mode.documentTitle}](${input.getPathToDocument()}) before we can accept your contribution. You can sign the ${mode.label} by just posting a Pull Request Comment same as the below format.<br/>`;
     const intro = introTemplate.replace('$you', you);
-    const signPhrase = mode === CLA
-        ? (0, pr_sign_comment_1.getPrSignComment)()
-        : input.getCustomPrSignComment() || DCO.defaultSignPhrase;
+    const signPhrase = (0, pr_sign_comment_1.getPrSignComment)();
     let text = `${intro}
    - - -
    ${signPhrase}
@@ -32899,12 +32895,14 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = signatureWithPRComment;
+exports.isCommentSignedByUser = isCommentSignedByUser;
+exports.commentContainsSignature = commentContainsSignature;
 const octokit_1 = __nccwpck_require__(3848);
 const github_1 = __nccwpck_require__(3228);
-const getInputs_1 = __nccwpck_require__(1902);
+const pr_sign_comment_1 = __nccwpck_require__(1595);
 function signatureWithPRComment(committerMap, committers) {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
+        var _a, _b, _c;
         const repoId = (_a = github_1.context.payload.repository) === null || _a === void 0 ? void 0 : _a.id;
         const allComments = yield octokit_1.octokit.paginate(octokit_1.octokit.rest.issues.listComments, {
             owner: github_1.context.repo.owner,
@@ -32921,14 +32919,14 @@ function signatureWithPRComment(committerMap, committers) {
                 name: prComment.user.login,
                 id: prComment.user.id,
                 comment_id: prComment.id,
-                body: (_b = prComment.body) === null || _b === void 0 ? void 0 : _b.trim().toLowerCase(),
+                body: (_b = prComment.body) !== null && _b !== void 0 ? _b : '',
                 created_at: prComment.created_at,
                 repoId,
                 pullRequestNo: github_1.context.issue.number
             });
         }
         for (const comment of listOfPRComments) {
-            if (isCommentSignedByUser(comment.body || '', comment.name)) {
+            if (isCommentSignedByUser((_c = comment.body) !== null && _c !== void 0 ? _c : '', comment.name)) {
                 const { body: _ } = comment, withoutBody = __rest(comment, ["body"]);
                 filteredListOfPRComments.push(withoutBody);
             }
@@ -32953,13 +32951,52 @@ function isCommentSignedByUser(comment, commentAuthor) {
     if (commentAuthor === 'github-actions[bot]') {
         return false;
     }
-    if ((0, getInputs_1.getCustomPrSignComment)() !== '') {
-        return (0, getInputs_1.getCustomPrSignComment)().toLowerCase() === comment;
+    return commentContainsSignature(comment, (0, pr_sign_comment_1.getPrSignComment)());
+}
+/** Any extra text in the comment must not exceed the phrase length, with a
+ * small absolute floor so that very short custom phrases still tolerate a
+ * brief remark such as `recheck` on a separate line. */
+const MIN_EXTRA_TEXT_ALLOWANCE = 32;
+/** Placeholder for a Markdown blockquote line in the normalised body so that
+ * the phrase block can never match across, or onto, a quoted line. */
+const QUOTE_LINE = '\0';
+/**
+ * Decide whether a PR comment counts as signing the CLA/DCO.
+ *
+ * The configured sign phrase must appear, verbatim, as a contiguous block of
+ * lines in the comment, with each phrase line being the only content of the
+ * matching comment line (case-insensitive; runs of whitespace collapsed;
+ * trailing `.` or `!` ignored; blank lines skipped). A comment line that
+ * begins with a Markdown quote marker (`>`) is never treated as a match,
+ * because quoted text is attributed to whoever is being quoted, not to the
+ * comment author. The phrase must also make up the bulk of the comment —
+ * any extra text may be at most `max(phrase.length, MIN_EXTRA_TEXT_ALLOWANCE)`
+ * characters — so a short addition is tolerated but the declaration cannot
+ * be buried inside a longer message.
+ */
+function commentContainsSignature(commentBody, signPhrase) {
+    const collapse = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+    const normLine = (s) => collapse(s.replace(/[.!]+\s*$/, ''));
+    const phraseLines = signPhrase
+        .split(/\r?\n/)
+        .map(normLine)
+        .filter(l => l !== '');
+    if (phraseLines.length === 0) {
+        return false;
     }
-    const signaturePattern = (0, getInputs_1.getUseDcoFlag)()
-        ? /^.*i \s*have \s*read \s*the \s*dco \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*dco.*$/
-        : /^.*i \s*have \s*read \s*the \s*cla \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*cla.*$/;
-    return comment.match(signaturePattern) !== null;
+    const bodyLines = commentBody
+        .split(/\r?\n/)
+        .map(l => (l.trimStart().startsWith('>') ? QUOTE_LINE : normLine(l)))
+        .filter(l => l !== '');
+    const hasOwnBlock = bodyLines.some((_, i) => i + phraseLines.length <= bodyLines.length &&
+        phraseLines.every((pl, k) => bodyLines[i + k] === pl));
+    if (!hasOwnBlock) {
+        return false;
+    }
+    const phraseLen = collapse(signPhrase).length;
+    const bodyLen = collapse(commentBody).length;
+    const allowance = Math.max(phraseLen, MIN_EXTRA_TEXT_ALLOWANCE);
+    return bodyLen <= phraseLen + allowance;
 }
 
 
@@ -33413,11 +33450,24 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_DCO_SIGN_PHRASE = exports.DEFAULT_CLA_SIGN_PHRASE = void 0;
 exports.getPrSignComment = getPrSignComment;
 const input = __importStar(__nccwpck_require__(1902));
+exports.DEFAULT_CLA_SIGN_PHRASE = 'I have read the CLA Document and I hereby sign the CLA';
+exports.DEFAULT_DCO_SIGN_PHRASE = 'I have read the DCO Document and I hereby sign the DCO';
+/**
+ * The phrase a contributor must post to sign. This is the single source of
+ * truth for both the text the bot tells contributors to paste and the text
+ * the matcher accepts, so the two cannot drift.
+ */
 function getPrSignComment() {
-    return (input.getCustomPrSignComment() ||
-        'I have read the CLA Document and I hereby sign the CLA');
+    const custom = input.getCustomPrSignComment();
+    if (custom !== '') {
+        return custom;
+    }
+    return input.getUseDcoFlag()
+        ? exports.DEFAULT_DCO_SIGN_PHRASE
+        : exports.DEFAULT_CLA_SIGN_PHRASE;
 }
 
 

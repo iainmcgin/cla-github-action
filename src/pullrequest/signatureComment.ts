@@ -6,7 +6,7 @@ import {
   ReactedCommitterMap,
   SigningComment
 } from '../interfaces'
-import { getUseDcoFlag, getCustomPrSignComment } from '../shared/getInputs'
+import { getPrSignComment } from '../shared/pr-sign-comment'
 
 export default async function signatureWithPRComment(
   committerMap: CommitterMap,
@@ -28,14 +28,14 @@ export default async function signatureWithPRComment(
       name: prComment.user.login,
       id: prComment.user.id,
       comment_id: prComment.id,
-      body: prComment.body?.trim().toLowerCase(),
+      body: prComment.body ?? '',
       created_at: prComment.created_at,
       repoId,
       pullRequestNo: context.issue.number
     })
   }
   for (const comment of listOfPRComments) {
-    if (isCommentSignedByUser(comment.body || '', comment.name)) {
+    if (isCommentSignedByUser(comment.body ?? '', comment.name)) {
       const { body: _, ...withoutBody } = comment
       filteredListOfPRComments.push(withoutBody)
     }
@@ -66,18 +66,71 @@ export default async function signatureWithPRComment(
   return commentedCommitterMap
 }
 
-function isCommentSignedByUser(
+export function isCommentSignedByUser(
   comment: string,
   commentAuthor: string
 ): boolean {
   if (commentAuthor === 'github-actions[bot]') {
     return false
   }
-  if (getCustomPrSignComment() !== '') {
-    return getCustomPrSignComment().toLowerCase() === comment
+  return commentContainsSignature(comment, getPrSignComment())
+}
+
+/** Any extra text in the comment must not exceed the phrase length, with a
+ * small absolute floor so that very short custom phrases still tolerate a
+ * brief remark such as `recheck` on a separate line. */
+const MIN_EXTRA_TEXT_ALLOWANCE = 32
+
+/** Placeholder for a Markdown blockquote line in the normalised body so that
+ * the phrase block can never match across, or onto, a quoted line. */
+const QUOTE_LINE = '\0'
+
+/**
+ * Decide whether a PR comment counts as signing the CLA/DCO.
+ *
+ * The configured sign phrase must appear, verbatim, as a contiguous block of
+ * lines in the comment, with each phrase line being the only content of the
+ * matching comment line (case-insensitive; runs of whitespace collapsed;
+ * trailing `.` or `!` ignored; blank lines skipped). A comment line that
+ * begins with a Markdown quote marker (`>`) is never treated as a match,
+ * because quoted text is attributed to whoever is being quoted, not to the
+ * comment author. The phrase must also make up the bulk of the comment —
+ * any extra text may be at most `max(phrase.length, MIN_EXTRA_TEXT_ALLOWANCE)`
+ * characters — so a short addition is tolerated but the declaration cannot
+ * be buried inside a longer message.
+ */
+export function commentContainsSignature(
+  commentBody: string,
+  signPhrase: string
+): boolean {
+  const collapse = (s: string): string =>
+    s.replace(/\s+/g, ' ').trim().toLowerCase()
+  const normLine = (s: string): string => collapse(s.replace(/[.!]+\s*$/, ''))
+
+  const phraseLines = signPhrase
+    .split(/\r?\n/)
+    .map(normLine)
+    .filter(l => l !== '')
+  if (phraseLines.length === 0) {
+    return false
   }
-  const signaturePattern = getUseDcoFlag()
-    ? /^.*i \s*have \s*read \s*the \s*dco \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*dco.*$/
-    : /^.*i \s*have \s*read \s*the \s*cla \s*document \s*and \s*i \s*hereby \s*sign \s*the \s*cla.*$/
-  return comment.match(signaturePattern) !== null
+
+  const bodyLines = commentBody
+    .split(/\r?\n/)
+    .map(l => (l.trimStart().startsWith('>') ? QUOTE_LINE : normLine(l)))
+    .filter(l => l !== '')
+
+  const hasOwnBlock = bodyLines.some(
+    (_, i) =>
+      i + phraseLines.length <= bodyLines.length &&
+      phraseLines.every((pl, k) => bodyLines[i + k] === pl)
+  )
+  if (!hasOwnBlock) {
+    return false
+  }
+
+  const phraseLen = collapse(signPhrase).length
+  const bodyLen = collapse(commentBody).length
+  const allowance = Math.max(phraseLen, MIN_EXTRA_TEXT_ALLOWANCE)
+  return bodyLen <= phraseLen + allowance
 }

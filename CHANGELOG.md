@@ -11,7 +11,21 @@ commit that introduced it.
 
 ## Unreleased
 
-_Nothing yet._
+### Changed
+- **CLA sign-comment matching tolerates a small amount of surrounding
+  text.** A comment now counts as a signature when the configured phrase
+  appears on its own line (or its own block of lines, for a multi-line
+  `custom-pr-sign-comment`), case-insensitive, with trailing `.`/`!`
+  ignored, and any other text in the comment is no longer than the
+  phrase itself (minimum allowance 32 characters). Previously the match
+  failed if the comment contained anything on another line — for example
+  a contributor adding `recheck` below the declaration. The same rule
+  now applies whether or not `custom-pr-sign-comment` is set; previously
+  that path required a byte-for-byte match. Note this is also slightly
+  *stricter* on the matching line itself: text before or after the
+  phrase on the same line (other than trailing punctuation) no longer
+  matches, and a line inside a `>` Markdown blockquote is never treated
+  as the author's own declaration.
 
 ## v3.1.0 — 2026-06-09
 

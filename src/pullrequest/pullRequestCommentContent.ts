@@ -5,20 +5,17 @@ import { getPrSignComment } from '../shared/pr-sign-comment'
 interface ModeText {
   label: string // 'CLA' | 'DCO'
   documentTitle: string // 'Contributor License Agreement' | 'Developer Certificate of Origin'
-  defaultSignPhrase: string
   botName: string // 'CLA Assistant Lite bot' | 'DCO Assistant Lite bot'
 }
 
 const CLA: ModeText = {
   label: 'CLA',
   documentTitle: 'Contributor License Agreement',
-  defaultSignPhrase: 'I have read the CLA Document and I hereby sign the CLA',
   botName: 'CLA Assistant Lite bot'
 }
 const DCO: ModeText = {
   label: 'DCO',
   documentTitle: 'Developer Certificate of Origin',
-  defaultSignPhrase: 'I have read the DCO Document and I hereby sign the DCO',
   botName: 'DCO Assistant Lite bot'
 }
 
@@ -52,10 +49,7 @@ function renderPending(mode: ModeText, committerMap: CommitterMap): string {
     `<br/>Thank you for your submission, we really appreciate it. Like many open-source projects, we ask that $you sign our [${mode.documentTitle}](${input.getPathToDocument()}) before we can accept your contribution. You can sign the ${mode.label} by just posting a Pull Request Comment same as the below format.<br/>`
   const intro = introTemplate.replace('$you', you)
 
-  const signPhrase =
-    mode === CLA
-      ? getPrSignComment()
-      : input.getCustomPrSignComment() || DCO.defaultSignPhrase
+  const signPhrase = getPrSignComment()
 
   let text = `${intro}
    - - -
